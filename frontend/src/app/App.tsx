@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider, roleHomePath, useAuth } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
+import { RoleRoute } from './auth/RoleRoute';
 import { AppShell } from './layout/AppShell';
 import { LoginPage } from '../features/auth/LoginPage';
 import { DispatcherWorkspace } from '../features/dispatcher/DispatcherWorkspace';
@@ -8,32 +9,18 @@ import { LoaderWorkspace } from '../features/loader/LoaderWorkspace';
 import { StoreWorkspace } from '../features/store/StoreWorkspace';
 import { DriverWorkspace } from '../features/driver/DriverWorkspace';
 
-function roleDashboardPath(role?: string): string {
-  switch (role) {
-    case 'STOREKEEPER':
-      return '/store';
-    case 'LOADER':
-      return '/load';
-    case 'DRIVER':
-      return '/drive';
-    case 'DISPATCHER':
-    default:
-      return '/dispatch';
-  }
-}
-
 function RootRedirect() {
   const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to={roleDashboardPath(user.role)} replace />;
+  return <Navigate to={roleHomePath(user.role)} replace />;
 }
 
 function LoginRoute() {
   const { user } = useAuth();
   if (user) {
-    return <Navigate to={roleDashboardPath(user.role)} replace />;
+    return <Navigate to={roleHomePath(user.role)} replace />;
   }
   return <LoginPage />;
 }
@@ -57,20 +44,20 @@ export default function App() {
           }
         >
           {/* Dispatcher */}
-          <Route path="/dispatch" element={<DispatcherWorkspace />} />
-          <Route path="/dispatch/*" element={<DispatcherWorkspace />} />
+          <Route path="/dispatch" element={<RoleRoute role="DISPATCHER"><DispatcherWorkspace /></RoleRoute>} />
+          <Route path="/dispatch/*" element={<RoleRoute role="DISPATCHER"><DispatcherWorkspace /></RoleRoute>} />
 
           {/* Loader */}
-          <Route path="/load" element={<LoaderWorkspace />} />
-          <Route path="/load/*" element={<LoaderWorkspace />} />
+          <Route path="/load" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
+          <Route path="/load/*" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
 
           {/* Storekeeper */}
-          <Route path="/store" element={<StoreWorkspace />} />
-          <Route path="/store/*" element={<StoreWorkspace />} />
+          <Route path="/store" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>} />
+          <Route path="/store/*" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>} />
 
           {/* Driver */}
-          <Route path="/drive" element={<DriverWorkspace />} />
-          <Route path="/drive/*" element={<DriverWorkspace />} />
+          <Route path="/drive" element={<RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>} />
+          <Route path="/drive/*" element={<RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>} />
         </Route>
 
         {/* Fallback */}

@@ -1,16 +1,9 @@
 ﻿import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../app/auth/AuthContext';
+import { isUserRole, roleHomePath, useAuth } from '../../app/auth/AuthContext';
 import { api } from '../../api';
 import logoImg from '../../assets/login-logo.png';
 import './auth.css';
-
-const rolePaths: Record<string, string> = {
-  DISPATCHER: '/dispatch',
-  STOREKEEPER: '/store',
-  LOADER: '/load',
-  DRIVER: '/drive',
-};
 
 export function LoginPage() {
   const { setUser } = useAuth();
@@ -29,13 +22,16 @@ export function LoginPage() {
 
     try {
       const res = await api.login(email.trim(), password);
+      if (!isUserRole(res.role)) {
+        throw new Error('Your account has an unsupported role. Please contact your administrator.');
+      }
       setUser({
         email: res.email,
         displayName: res.displayName || 'Waypoint User',
         role: res.role,
         accessToken: res.accessToken,
       });
-      navigate(rolePaths[res.role] || '/dispatch', { replace: true });
+      navigate(roleHomePath(res.role), { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       try {
