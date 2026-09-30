@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../auth/AuthContext';
 import logoImg from '../../assets/logo.png';
+import logoShortImg from '../../assets/logo-short.png';
 
 type IconName = 'home' | 'map' | 'box' | 'truck' | 'radio' | 'alert' | 'list' | 'chart' | 'check' | 'pin' | 'fuel' | 'clock' | 'settings' | 'help' | 'search' | 'bell' | 'sun' | 'moon' | 'menu' | 'chevron';
 const iconPaths: Record<IconName, string> = {
@@ -41,6 +42,7 @@ export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
@@ -59,11 +61,26 @@ export function AppShell() {
   const initials = user?.displayName ? user.displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'WP';
 
   return (
-    <div className="app-container">
+    <div className={`app-container${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <header className="top-header">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} type="button" aria-label="Toggle menu" aria-expanded={sidebarOpen}><Icon name="menu" /></button>
+        <div className="brand-logo-area">
+          <a className="brand-home-link" href="/" aria-label="Waypoint home">
+            <img className="brand-logo-full" src={logoImg} alt="Waypoint" />
+            <img className="brand-logo-short" src={logoShortImg} alt="" aria-hidden="true" />
+          </a>
+          <button
+            className="sidebar-toggle"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            type="button"
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <Icon name="chevron" />
+          </button>
+        </div>
         <div className="header-left">
-          <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} type="button" aria-label="Toggle menu"><Icon name="menu" /></button>
-          <a className="brand-logo-area" href="/"><img src={logoImg} alt="Waypoint" /></a>
           <span className="header-greeting">Good morning, <strong>{user?.displayName ?? 'User'}</strong></span>
         </div>
         <div className="header-search">
@@ -82,15 +99,15 @@ export function AppShell() {
 
       <div className="main-wrapper">
         {sidebarOpen && <button className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" type="button" />}
-        <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
+        <aside className={`sidebar${sidebarOpen ? ' open' : ''}${sidebarCollapsed ? ' collapsed' : ''}`}>
           <nav className="sidebar-nav" aria-label="Main navigation">
-            {links.map((item) => <NavLink key={item.path} to={item.path} end={item.path.split('/').length === 2} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} onClick={() => setSidebarOpen(false)}>
-              <span className="nav-icon"><Icon name={item.icon} /></span>{item.label}
+            {links.map((item) => <NavLink key={item.path} to={item.path} end={item.path.split('/').length === 2} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} onClick={() => setSidebarOpen(false)} aria-label={item.label} title={sidebarCollapsed ? item.label : undefined}>
+              <span className="nav-icon"><Icon name={item.icon} /></span><span className="nav-label">{item.label}</span>
             </NavLink>)}
           </nav>
           <div className="sidebar-footer">
-            <NavLink to="/settings" className="nav-link" onClick={() => setSidebarOpen(false)}><span className="nav-icon"><Icon name="settings" /></span>Settings</NavLink>
-            <NavLink to="/help" className="nav-link" onClick={() => setSidebarOpen(false)}><span className="nav-icon"><Icon name="help" /></span>Help</NavLink>
+            <NavLink to="/settings" className="nav-link" onClick={() => setSidebarOpen(false)} aria-label="Settings" title={sidebarCollapsed ? 'Settings' : undefined}><span className="nav-icon"><Icon name="settings" /></span><span className="nav-label">Settings</span></NavLink>
+            <NavLink to="/help" className="nav-link" onClick={() => setSidebarOpen(false)} aria-label="Help" title={sidebarCollapsed ? 'Help' : undefined}><span className="nav-icon"><Icon name="help" /></span><span className="nav-label">Help</span></NavLink>
           </div>
         </aside>
         <main className="content-area"><Outlet context={{ searchQuery }} /></main>

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Modal } from '../../shared/ui/Components';
+import storeManagerHero from '../../assets/store-manager-hero.png';
+import expectedDelivery from '../../assets/expected-delivery.png';
+import arrowIcon from '../../assets/arrow-icon.png';
+import './store.css';
 
 export function StoreWorkspace() {
   const { searchQuery } = (useOutletContext() as { searchQuery?: string }) || {};
@@ -34,7 +38,7 @@ export function StoreWorkspace() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header Info */}
       <div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Store Dashboard
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -43,45 +47,19 @@ export function StoreWorkspace() {
       </div>
 
       {/* Place Order Banner */}
-      <div
-        className="card"
-        style={{
-          background: 'linear-gradient(135deg, var(--purple-600), var(--purple-700))',
-          borderRadius: 20,
-          padding: '24px 32px',
-          color: '#FFFFFF',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 10px 30px rgba(124, 58, 237, 0.25)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, zIndex: 2 }}>
-          {/* Cloud Illustration */}
-          <svg width="70" height="70" viewBox="0 0 100 100" fill="none">
-            <path d="M20 60 C10 60 5 50 15 40 C10 25 30 15 45 25 C55 10 75 15 80 30 C90 30 95 45 85 55 C95 65 80 75 70 70 Z" fill="#FFFFFF" fillOpacity="0.25" />
-            <path d="M40 45 L65 30 L55 60 L48 48 Z" fill="#FFFFFF" />
-          </svg>
-
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.02em' }}>
-              PLACE ORDER NOW
-            </div>
-            <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4, fontWeight: 500 }}>
-              Orders close at 4:00 PM
-            </div>
-          </div>
+      <div className="store-order-banner">
+        <img className="store-order-art" src={storeManagerHero} alt="Order sheet and paper plane" />
+        <div className="store-order-copy">
+          <div className="store-order-title">PLACE ORDER NOW</div>
+          <div className="store-order-subtitle">Orders close at 4:00 PM</div>
         </div>
-
         <button
           className="btn-white"
           onClick={() => setIsOrderModalOpen(true)}
-          style={{ padding: '12px 24px', fontSize: 14, zIndex: 2 }}
+          style={{ padding: '12px 24px', fontSize: 16 }}
           type="button"
         >
-          Order {'->'}
+          Order <img className="store-order-arrow" src={arrowIcon} alt="" aria-hidden="true" />
         </button>
       </div>
 
@@ -157,17 +135,7 @@ export function StoreWorkspace() {
       </div>
 
       {/* Next Expected Delivery Card */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '24px 32px',
-          gap: 20,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="card store-delivery-card">
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
@@ -177,7 +145,7 @@ export function StoreWorkspace() {
               Live ETA
             </span>
           </div>
-          <div style={{ fontSize: 38, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
+          <div style={{ fontSize: 38, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
             07:45
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 600 }}>
@@ -185,22 +153,15 @@ export function StoreWorkspace() {
           </div>
         </div>
 
-        {/* Vector Illustration */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <svg width="180" height="70" viewBox="0 0 200 80" fill="none">
-            <circle cx="40" cy="40" r="28" fill="var(--purple-100)" />
-            <path d="M40 24 V40 H52" stroke="var(--purple-700)" strokeWidth="3" strokeLinecap="round" />
-            <path d="M90 40 C110 20, 130 60, 160 40" stroke="var(--purple-300)" strokeWidth="3" strokeDasharray="4 4" fill="none" />
-            <circle cx="160" cy="40" r="8" fill="var(--purple-600)" />
-          </svg>
-
+        <div className="store-delivery-actions">
+          <img className="store-delivery-art" src={expectedDelivery} alt="Delivery truck following a route" />
           <button
             className="btn-primary"
             onClick={() => setIsTrackModalOpen(true)}
             style={{ borderRadius: 10, padding: '12px 20px' }}
             type="button"
           >
-            Track Order {'->'}
+            Track Order <img className="store-track-arrow" src={arrowIcon} alt="" aria-hidden="true" />
           </button>
         </div>
       </div>

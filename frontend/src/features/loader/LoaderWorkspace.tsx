@@ -1,7 +1,10 @@
-import { useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Modal } from '../../shared/ui/Components';
+import truckInfoImage from '../../assets/truck-info.png';
+import './loader.css';
 
 type LoadStatus = 'loading' | 'ready' | 'flagged' | 'not-started';
+type ShipmentStatus = 'scanned' | 'missing';
 
 interface VehicleEntry {
   id: string;
@@ -14,15 +17,23 @@ interface VehicleEntry {
   status: LoadStatus;
   packages: number;
   tempReq: 'Chilled' | 'Dry';
+  stopsDone: number;
+  totalStops: number;
 }
 
 const VEHICLES: VehicleEntry[] = [
-  { id: 'V-01', plate: 'LP-6387', type: 'Freezer Truck', dock: 'D-1', route: 'R-1 · Colombo', driver: 'N. Perera', loadPct: 78, status: 'loading', packages: 19, tempReq: 'Chilled' },
-  { id: 'V-04', plate: 'LP-4201', type: 'Dry-Box Truck', dock: 'D-2', route: 'R-2 · Kandy', driver: 'S. Fernando', loadPct: 100, status: 'ready', packages: 34, tempReq: 'Dry' },
-  { id: 'V-02', plate: 'LP-5510', type: 'Freezer Truck', dock: 'D-3', route: 'R-3 · Galle', driver: 'A. Silva', loadPct: 55, status: 'loading', packages: 12, tempReq: 'Chilled' },
-  { id: 'V-07', plate: 'LP-3309', type: 'Van', dock: 'D-4', route: 'R-4 · Kandy', driver: 'K. Bandara', loadPct: 100, status: 'ready', packages: 8, tempReq: 'Dry' },
-  { id: 'V-03', plate: 'LP-9124', type: 'Dry-Box Truck', dock: 'D-5', route: 'R-5 · Negombo', driver: 'M. Rizwan', loadPct: 20, status: 'flagged', packages: 0, tempReq: 'Dry' },
-  { id: 'V-06', plate: 'LP-7711', type: 'Freezer Truck', dock: 'D-6', route: 'Unassigned', driver: '—', loadPct: 0, status: 'not-started', packages: 0, tempReq: 'Chilled' },
+  { id: 'TRC-204', plate: 'LG-3342', type: 'Freezer Truck', dock: 'D-03', route: 'Peliyagoda to Gampaha', driver: 'Sarith Siriwaddana', loadPct: 48, status: 'loading', packages: 19, tempReq: 'Chilled', stopsDone: 4, totalStops: 6 },
+  { id: 'TRC-208', plate: 'LG-6789', type: 'Dry-Box Truck', dock: 'D-01', route: 'Peliyagoda to Negombo', driver: 'N. Perera', loadPct: 25, status: 'flagged', packages: 8, tempReq: 'Dry', stopsDone: 2, totalStops: 8 },
+  { id: 'TRC-212', plate: 'LG-3345', type: 'Freezer Truck', dock: 'D-05', route: 'Peliyagoda to Ja-Ela', driver: 'A. Silva', loadPct: 0, status: 'not-started', packages: 0, tempReq: 'Chilled', stopsDone: 0, totalStops: 5 },
+  { id: 'TRC-219', plate: 'LG-4954', type: 'Freezer Truck', dock: 'D-02', route: 'Peliyagoda to Kelaniya', driver: 'S. Fernando', loadPct: 100, status: 'ready', packages: 32, tempReq: 'Chilled', stopsDone: 8, totalStops: 8 },
+  { id: 'TRC-223', plate: 'LP-8211', type: 'Dry-Box Truck', dock: 'D-04', route: 'Peliyagoda to Wattala', driver: 'K. Bandara', loadPct: 100, status: 'ready', packages: 16, tempReq: 'Dry', stopsDone: 3, totalStops: 3 },
+  { id: 'TRC-231', plate: 'LW-6589', type: 'Van', dock: 'D-06', route: 'Peliyagoda to Ragama', driver: 'M. Rizwan', loadPct: 14, status: 'loading', packages: 3, tempReq: 'Dry', stopsDone: 1, totalStops: 7 },
+];
+
+const SHIPMENTS = [
+  { id: 'SHP-9821', route: 'NY → Neg', type: 'Pallet/Box', quantity: '10 pallets', weight: '500 Kg', dimensions: '1×0.6×1m' },
+  { id: 'SHP-9822', route: 'NY → Neg', type: 'Pallet/Box', quantity: '8 pallets', weight: '420 Kg', dimensions: '1×0.6×1m' },
+  { id: 'SHP-9823', route: 'NY → Neg', type: 'Pallet/Box', quantity: '6 pallets', weight: '350 Kg', dimensions: '0.8×0.6×1m' },
 ];
 
 const STATUS_LABELS: Record<LoadStatus, string> = {
@@ -32,12 +43,29 @@ const STATUS_LABELS: Record<LoadStatus, string> = {
   'not-started': 'Not started',
 };
 
-type FilterType = 'all' | LoadStatus;
+const CHECKLIST_ITEMS = [
+  { key: 'sealVerified', label: 'Cargo seals verified and intact' },
+  { key: 'tempChecked', label: 'Cargo temperature checked' },
+  { key: 'manifestSigned', label: 'Loading manifest signed by driver' },
+  { key: 'safetyCheck', label: 'Vehicle safety inspection passed' },
+] as const;
+
+type Checklist = Record<(typeof CHECKLIST_ITEMS)[number]['key'], boolean>;
+
+function Chevron({ direction }: { direction: 'left' | 'right' }) {
+  return <svg className={`loader-chevron ${direction}`} viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7" /></svg>;
+}
 
 export function LoaderWorkspace() {
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'truck'>('dashboard');
+  const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
+  const [vehicleFilter, setVehicleFilter] = useState<'all' | LoadStatus>('all');
+  const [shipmentSearch, setShipmentSearch] = useState('');
+  const [sortAscending, setSortAscending] = useState(true);
+  const [listView, setListView] = useState(false);
+  const [shipmentStatuses, setShipmentStatuses] = useState<Record<string, ShipmentStatus | undefined>>({});
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleEntry | null>(null);
-  const [checklist, setChecklist] = useState({
+  const [checklist, setChecklist] = useState<Checklist>({
     sealVerified: false,
     tempChecked: false,
     manifestSigned: false,
@@ -46,440 +74,257 @@ export function LoaderWorkspace() {
   const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
   const [clearedVehicle, setClearedVehicle] = useState<string | null>(null);
 
-  const stats = {
+  const vehicle = VEHICLES[activeVehicleIndex];
+  const [routeOrigin = 'Peliyagoda', routeDestination = 'Gampaha'] = vehicle.route.split(' to ');
+  const currentLoad = ((13.5 * vehicle.loadPct) / 100).toFixed(1);
+  const allChecked = Object.values(checklist).every(Boolean);
+  const vehicleCounts = {
     total: VEHICLES.length,
-    loading: VEHICLES.filter((v) => v.status === 'loading').length,
-    ready: VEHICLES.filter((v) => v.status === 'ready').length,
-    flagged: VEHICLES.filter((v) => v.status === 'flagged').length,
+    loading: VEHICLES.filter((entry) => entry.status === 'loading').length,
+    ready: VEHICLES.filter((entry) => entry.status === 'ready').length,
+    flagged: VEHICLES.filter((entry) => entry.status === 'flagged').length,
+  };
+  const filteredVehicles = vehicleFilter === 'all' ? VEHICLES : VEHICLES.filter((entry) => entry.status === vehicleFilter);
+
+  const visibleShipments = useMemo(() => {
+    const query = shipmentSearch.trim().toLowerCase();
+    return SHIPMENTS
+      .filter((shipment) => shipment.id.toLowerCase().includes(query))
+      .slice()
+      .sort((a, b) => sortAscending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
+  }, [shipmentSearch, sortAscending]);
+
+  const changeVehicle = (step: number) => {
+    setActiveVehicleIndex((index) => (index + step + VEHICLES.length) % VEHICLES.length);
   };
 
-  const filtered = filter === 'all' ? VEHICLES : VEHICLES.filter((v) => v.status === filter);
-
-  const handleClearDeparture = (vehicle: VehicleEntry) => {
-    setSelectedVehicle(vehicle);
+  const handleClearDeparture = (entry: VehicleEntry) => {
+    setSelectedVehicle(entry);
     setChecklist({ sealVerified: false, tempChecked: false, manifestSigned: false, safetyCheck: false });
     setIsClearanceModalOpen(true);
   };
-
-  const allChecked = Object.values(checklist).every(Boolean);
 
   const handleConfirmClearance = () => {
     if (selectedVehicle) setClearedVehicle(selectedVehicle.plate);
     setIsClearanceModalOpen(false);
   };
 
-  const filterPills: { label: string; value: FilterType }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'Loading', value: 'loading' },
-    { label: 'Ready', value: 'ready' },
-    { label: 'Flagged', value: 'flagged' },
-    { label: 'Not started', value: 'not-started' },
-  ];
+  const updateShipmentStatus = (shipmentId: string, status: ShipmentStatus) => {
+    setShipmentStatuses((current) => ({ ...current, [shipmentId]: current[shipmentId] === status ? undefined : status }));
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-      {/* ── PAGE HEADER ── */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Vehicles</h1>
-          <p className="page-subtitle">Peliyagoda distribution centre · Morning loading window</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-secondary" type="button">
-            📥 Import Manifest
-          </button>
-          <button className="btn-primary" type="button">
-            + Flag Issue
-          </button>
-        </div>
-      </div>
-
-      {/* ── 4 STAT CARDS ── */}
-      <div className="stat-cards-grid">
-        {/* Trucks today */}
-        <div
-          className="stat-card"
-          onClick={() => setFilter('all')}
-          style={{ cursor: 'pointer', borderColor: filter === 'all' ? 'var(--purple-400)' : undefined }}
-        >
-          <div>
-            <div className="stat-card-title">Trucks today</div>
-            <div className="stat-card-value">{stats.total}</div>
-            <div className="stat-card-meta">Scheduled this window</div>
-          </div>
-          <div className="stat-card-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="1" y="3" width="15" height="13" />
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-              <circle cx="5.5" cy="18.5" r="2.5" />
-              <circle cx="18.5" cy="18.5" r="2.5" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Loading */}
-        <div
-          className="stat-card"
-          onClick={() => setFilter('loading')}
-          style={{ cursor: 'pointer', borderColor: filter === 'loading' ? 'var(--purple-400)' : undefined }}
-        >
-          <div>
-            <div className="stat-card-title">Loading</div>
-            <div className="stat-card-value" style={{ color: 'var(--status-purple-text)' }}>{stats.loading}</div>
-            <div className="stat-card-meta">In progress now</div>
-          </div>
-          <div className="stat-card-icon" style={{ background: 'var(--status-purple-bg)', color: 'var(--status-purple-text)' }}>
-            ⏳
-          </div>
-        </div>
-
-        {/* Ready */}
-        <div
-          className="stat-card"
-          onClick={() => setFilter('ready')}
-          style={{ cursor: 'pointer', borderColor: filter === 'ready' ? 'var(--purple-400)' : undefined }}
-        >
-          <div>
-            <div className="stat-card-title">Ready</div>
-            <div className="stat-card-value" style={{ color: 'var(--status-good-text)' }}>{stats.ready}</div>
-            <div className="stat-card-meta">Cleared for departure</div>
-          </div>
-          <div className="stat-card-icon" style={{ background: 'var(--status-good-bg)', color: 'var(--status-good-text)' }}>
-            ✅
-          </div>
-        </div>
-
-        {/* Flagged */}
-        <div
-          className="stat-card"
-          onClick={() => setFilter('flagged')}
-          style={{ cursor: 'pointer', borderColor: filter === 'flagged' ? 'var(--purple-400)' : undefined }}
-        >
-          <div>
-            <div className="stat-card-title">Flagged</div>
-            <div className="stat-card-value" style={{ color: 'var(--status-danger-text)' }}>{stats.flagged}</div>
-            <div className="stat-card-meta">Needs attention</div>
-          </div>
-          <div className="stat-card-icon" style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)' }}>
-            🚨
-          </div>
-        </div>
-      </div>
-
-      {/* ── DEPARTURE CLEARED BANNER ── */}
+    <div className="loader-workspace">
       {clearedVehicle && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 24px',
-            background: 'var(--status-good-bg)',
-            border: '1px solid #86EFAC',
-            borderRadius: 12,
-            fontSize: 14,
-            fontWeight: 700,
-            color: 'var(--status-good-text)',
-          }}
-        >
-          <span>✅ Vehicle {clearedVehicle} cleared for departure!</span>
-          <button
-            type="button"
-            onClick={() => setClearedVehicle(null)}
-            style={{ background: 'transparent', border: 0, color: 'var(--status-good-text)', cursor: 'pointer', fontSize: 18 }}
-          >
-            ×
-          </button>
+        <div className="loader-clearance-notice" role="status">
+          Vehicle {clearedVehicle} cleared for departure.
+          <button type="button" onClick={() => setClearedVehicle(null)} aria-label="Dismiss clearance message">×</button>
         </div>
       )}
 
-      {/* ── FILTER PILLS ── */}
-      <div className="filter-pills-row">
-        {filterPills.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            className={`filter-pill${filter === p.value ? ' active' : ''}`}
-            onClick={() => setFilter(p.value)}
-          >
-            {p.label}
-            {p.value !== 'all' && (
-              <span
-                style={{
-                  marginLeft: 6,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  padding: '1px 6px',
-                  borderRadius: 99,
-                  background: filter === p.value ? 'rgba(255,255,255,0.25)' : 'var(--bg-subtle)',
-                  color: filter === p.value ? '#fff' : 'var(--text-muted)',
-                }}
-              >
-                {p.value === 'loading' ? stats.loading : p.value === 'ready' ? stats.ready : p.value === 'flagged' ? stats.flagged : VEHICLES.filter(v => v.status === 'not-started').length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── VEHICLE QUEUE LIST ── */}
-      <div className="table-card">
-        <div className="table-header-title">
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              VEHICLE LOADING QUEUE
-            </span>
-          </div>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
-            {filtered.length} vehicle{filtered.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {/* Desktop Table */}
-        <div className="table-container">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>Vehicle</th>
-                <th>Dock</th>
-                <th>Route</th>
-                <th>Driver</th>
-                <th>Load progress</th>
-                <th>Temp</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <div className="col-bold">{v.plate}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{v.type}</div>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 700, color: 'var(--purple-600)' }}>{v.dock}</span>
-                  </td>
-                  <td>{v.route}</td>
-                  <td>{v.driver}</td>
-                  <td style={{ minWidth: 140 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className="bar-track" style={{ flex: 1, height: 6 }}>
-                        <div
-                          className="bar-fill"
-                          style={{
-                            width: `${v.loadPct}%`,
-                            backgroundColor: v.loadPct === 100 ? '#16A34A' : v.status === 'flagged' ? '#EF4444' : 'var(--purple-600)',
-                          }}
-                        />
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', minWidth: 30 }}>
-                        {v.loadPct}%
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {v.packages} pkg{v.packages !== 1 ? 's' : ''}
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        background: v.tempReq === 'Chilled' ? 'var(--status-info-bg)' : 'var(--status-warn-bg)',
-                        color: v.tempReq === 'Chilled' ? 'var(--status-info-text)' : 'var(--status-warn-text)',
-                      }}
-                    >
-                      {v.tempReq === 'Chilled' ? '❄️ Chilled' : '📦 Dry'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`pill-badge ${v.status}`}>
-                      {STATUS_LABELS[v.status]}
-                    </span>
-                  </td>
-                  <td>
-                    {v.status === 'ready' ? (
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8 }}
-                        onClick={() => handleClearDeparture(v)}
-                      >
-                        Clear →
-                      </button>
-                    ) : v.status === 'flagged' ? (
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8, borderColor: '#EF4444', color: '#991B1B' }}
-                        onClick={() => setSelectedVehicle(v)}
-                      >
-                        Resolve
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        style={{ background: 'transparent', border: 0, color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18 }}
-                        onClick={() => setSelectedVehicle(v)}
-                        aria-label="View details"
-                      >
-                        ›
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── MOBILE CARD LIST (visible on small screens) ── */}
-      <style>{`
-        @media (max-width: 768px) {
-          .loader-desktop-table { display: none !important; }
-          .loader-mobile-list { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .loader-mobile-list { display: none !important; }
-        }
-      `}</style>
-
-      <div className="loader-mobile-list" style={{ flexDirection: 'column', gap: 12 }}>
-        {filtered.map((v) => (
-          <div
-            key={v.id}
-            className="card"
-            style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{v.plate}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{v.type} · {v.dock}</div>
-              </div>
-              <span className={`pill-badge ${v.status}`}>{STATUS_LABELS[v.status]}</span>
-            </div>
-
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              <strong>Route:</strong> {v.route} &nbsp;|&nbsp; <strong>Driver:</strong> {v.driver}
-            </div>
-
+      {currentView === 'dashboard' ? (
+        <section className="loader-vehicle-dashboard" aria-label="Vehicle loading dashboard">
+          <header className="loader-dashboard-heading">
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
-                <span>Load progress</span>
-                <span>{v.loadPct}% · {v.packages} pkgs</span>
-              </div>
-              <div className="bar-track">
-                <div
-                  className="bar-fill"
-                  style={{
-                    width: `${v.loadPct}%`,
-                    backgroundColor: v.loadPct === 100 ? '#16A34A' : v.status === 'flagged' ? '#EF4444' : 'var(--purple-600)',
-                  }}
-                />
-              </div>
+              <h1>Vehicles</h1>
+              <p>Peliyagoda distribution centre · Morning loading window</p>
+            </div>
+          </header>
+
+          <div className="loader-dashboard-stats">
+            {([
+              { label: 'Trucks today', value: vehicleCounts.total, note: 'Peliyagoda', status: 'all' as const },
+              { label: 'Loading', value: vehicleCounts.loading, note: 'In progress', status: 'loading' as const },
+              { label: 'Ready', value: vehicleCounts.ready, note: 'Departure cleared', status: 'ready' as const },
+              { label: 'Flagged', value: vehicleCounts.flagged, note: 'Needs attention', status: 'flagged' as const },
+            ]).map((stat) => (
+              <button className={`loader-dashboard-stat${vehicleFilter === stat.status ? ' selected' : ''}`} key={stat.label} type="button" onClick={() => setVehicleFilter(stat.status)}>
+                <span>{stat.label}</span><strong>{stat.value}</strong><small>{stat.note}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="loader-filter-pills" aria-label="Filter vehicles">
+            {([
+              { label: 'All', value: 'all' as const },
+              { label: 'Loading', value: 'loading' as const },
+              { label: 'Ready', value: 'ready' as const },
+              { label: 'Flagged', value: 'flagged' as const },
+              { label: 'Not started', value: 'not-started' as const },
+            ]).map((option) => (
+              <button className={vehicleFilter === option.value ? 'active' : ''} type="button" key={option.value} onClick={() => setVehicleFilter(option.value)}>{option.label}</button>
+            ))}
+          </div>
+
+          <div className="loader-queue-heading">
+            <h2>Vehicle queue</h2>
+            <span>{filteredVehicles.length} vehicles</span>
+          </div>
+
+          <div className="loader-vehicle-queue">
+            {filteredVehicles.map((entry) => {
+              const index = VEHICLES.findIndex((item) => item.id === entry.id);
+              return (
+                <button
+                  className={`loader-queue-row${index === activeVehicleIndex ? ' selected' : ''}`}
+                  key={entry.id}
+                  type="button"
+                  onClick={() => { setActiveVehicleIndex(index); setCurrentView('truck'); }}
+                  aria-label={`Open truck ${entry.plate}, ${STATUS_LABELS[entry.status]}`}
+                >
+                  <span className="loader-queue-vehicle"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h13v12H2zM15 9h4l3 3v5h-7M6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg></i><span><strong>{entry.plate}</strong><small>Dock {entry.dock}</small></span></span>
+                  <span className="loader-queue-route"><small>Route</small><strong>{entry.route.replace(' to ', ' → ')}</strong></span>
+                  <span className="loader-queue-progress"><small>Load progress</small><strong>{entry.stopsDone} of {entry.totalStops} stops</strong></span>
+                  <span className={`loader-queue-status ${entry.status}`}>{STATUS_LABELS[entry.status]}</span>
+                  <Chevron direction="right" />
+                </button>
+              );
+            })}
+            {filteredVehicles.length === 0 && <p className="loader-empty-state">No vehicles match this filter.</p>}
+          </div>
+        </section>
+      ) : (
+        <>
+      <header className="loader-truck-header">
+        <div className="loader-heading-group">
+          <button className="loader-back-button" type="button" onClick={() => setCurrentView('dashboard')} aria-label="Back to vehicle dashboard">
+            <Chevron direction="left" />
+          </button>
+          <h1>Truck Information</h1>
+        </div>
+        <div className="loader-vehicle-controls" aria-label="Select truck">
+          <button type="button" onClick={() => changeVehicle(-1)} aria-label="Previous truck"><Chevron direction="left" /></button>
+          <button type="button" onClick={() => changeVehicle(1)} aria-label="Next truck"><Chevron direction="right" /></button>
+        </div>
+      </header>
+
+      <section className="loader-truck-overview" aria-label="Selected truck details">
+        <div className="loader-truck-details">
+          <article className="loader-info-card">
+            <div className="loader-info-card-title">
+              <strong>{vehicle.plate}</strong>
+              <span className={`loader-status-pill ${vehicle.status}`}><i />{STATUS_LABELS[vehicle.status]}</span>
             </div>
 
-            {v.status === 'ready' && (
-              <button
-                type="button"
-                className="btn-primary"
-                style={{ width: '100%', justifyContent: 'center', borderRadius: 10 }}
-                onClick={() => handleClearDeparture(v)}
-              >
-                Clear for Departure →
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+            <div className="loader-driver-row">
+              <div className="loader-driver-avatar" aria-hidden="true">{vehicle.driver.slice(0, 1)}</div>
+              <div className="loader-driver-name">
+                <span>Driver</span>
+                <strong>{vehicle.driver}</strong>
+              </div>
+              {vehicle.status === 'ready' && (
+                <button className="loader-clear-button" type="button" onClick={() => handleClearDeparture(vehicle)}>Clear for departure</button>
+              )}
+              {vehicle.status === 'flagged' && <span className="loader-issue-note">Issue flagged</span>}
+            </div>
 
-      {/* ── DEPARTURE CLEARANCE CHECKLIST MODAL ── */}
+            <div className="loader-vehicle-facts">
+              <div><span>Truck ID</span><strong>{vehicle.id}</strong></div>
+              <div><span>Dock</span><strong>{`Dock #${Number(vehicle.dock.slice(2))}`}</strong></div>
+              <div><span>Started</span><strong>08:34 AM</strong></div>
+            </div>
+
+            <div className="loader-route-line">
+              <div><strong>{routeOrigin}</strong><span>Origin</span></div>
+              <span className="loader-route-track"><i /></span>
+              <div className="destination"><strong>{routeDestination}</strong><span>Destination</span></div>
+            </div>
+          </article>
+
+          <article className="loader-capacity-card">
+            <h2>Capacity &amp; load</h2>
+            <div className="loader-capacity-content">
+              <div className="loader-capacity-ring" role="img" aria-label={`${vehicle.loadPct}% weight capacity used`}>
+                <svg viewBox="0 0 100 100" aria-hidden="true">
+                  <circle className="loader-capacity-track" cx="50" cy="50" r="43" />
+                  <circle className="loader-capacity-value" cx="50" cy="50" r="43" style={{ strokeDasharray: 270.18, strokeDashoffset: 270.18 * (1 - vehicle.loadPct / 100) }} />
+                </svg>
+                <div><strong>{vehicle.loadPct}%</strong><span>Weight</span></div>
+              </div>
+              <div className="loader-capacity-numbers">
+                <div><span>Current load</span><strong>{currentLoad}<small> tons</small></strong></div>
+                <div><span>Max. capacity</span><strong>13.5<small> tons</small></strong></div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div className="loader-truck-visual">
+          <img src={truckInfoImage} alt={`${vehicle.type} ${vehicle.plate}, ${STATUS_LABELS[vehicle.status]}`} />
+        </div>
+      </section>
+
+      <section className="loader-sequence" aria-labelledby="loading-sequence-title">
+        <div className="loader-sequence-header">
+          <h2 id="loading-sequence-title">Loading Sequence</h2>
+          <div className="loader-sequence-controls">
+            <label className="loader-shipment-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+              <input type="search" placeholder="Search for shipment ID" value={shipmentSearch} onChange={(event) => setShipmentSearch(event.target.value)} />
+            </label>
+            <button className="loader-toolbar-button" type="button" onClick={() => setSortAscending((ascending) => !ascending)}>
+              <span aria-hidden="true">↕</span> Sort by
+            </button>
+            <button className={`loader-toolbar-button loader-grid-toggle${listView ? ' active' : ''}`} type="button" onClick={() => setListView((current) => !current)} aria-label={listView ? 'Show grid view' : 'Show list view'} title={listView ? 'Show grid view' : 'Show list view'}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>
+              <span>Grid</span>
+            </button>
+          </div>
+        </div>
+
+        <div className={`loader-shipment-grid${listView ? ' list-view' : ''}`}>
+          {visibleShipments.map((shipment) => {
+            const status = shipmentStatuses[shipment.id];
+            return (
+              <article className={`loader-shipment-card${status ? ` ${status}` : ''}`} key={shipment.id}>
+                <div className="loader-shipment-card-heading">
+                  <div className="loader-package-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5zM3 8v9l9 4 9-4V8m-9 5v8"/></svg></div>
+                  <strong>{shipment.id}</strong>
+                  <span className="loader-shipment-type"><i />Standard</span>
+                </div>
+                <div className="loader-shipment-details">
+                  <div><span>Route</span><strong>{shipment.route}</strong></div>
+                  <div><span>Type</span><strong>{shipment.type}</strong></div>
+                  <div><span>Quantity</span><strong>{shipment.quantity}</strong></div>
+                  <div><span>Total weight</span><strong>{shipment.weight}</strong></div>
+                  <div><span>Dimension</span><strong>{shipment.dimensions}</strong></div>
+                </div>
+                {status && <div className="loader-shipment-feedback" role="status">{status === 'scanned' ? 'Shipment scanned' : 'Marked as missing'}</div>}
+                <div className="loader-shipment-actions">
+                  <button className="loader-scan-button" type="button" onClick={() => updateShipmentStatus(shipment.id, 'scanned')} disabled={status === 'scanned'}>{status === 'scanned' ? 'Scanned' : 'Scan'}</button>
+                  <button className="loader-missing-button" type="button" onClick={() => updateShipmentStatus(shipment.id, 'missing')}>{status === 'missing' ? 'Undo' : 'Missing'}</button>
+                </div>
+              </article>
+            );
+          })}
+          {visibleShipments.length === 0 && <p className="loader-empty-state">No shipments match that ID.</p>}
+        </div>
+      </section>
+        </>
+      )}
+
       <Modal
         isOpen={isClearanceModalOpen}
         onClose={() => setIsClearanceModalOpen(false)}
         title={`Departure Clearance · ${selectedVehicle?.plate}`}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Vehicle Summary */}
-          <div style={{ background: 'var(--bg-subtle)', padding: 14, borderRadius: 10, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>VEHICLE</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{selectedVehicle?.plate}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{selectedVehicle?.type}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>ROUTE</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedVehicle?.route}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Driver: {selectedVehicle?.driver}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>PACKAGES</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--purple-600)' }}>{selectedVehicle?.packages}</div>
-            </div>
+        <div className="loader-clearance-modal">
+          <div className="loader-clearance-summary">
+            <div><span>Vehicle</span><strong>{selectedVehicle?.plate}</strong><small>{selectedVehicle?.type}</small></div>
+            <div><span>Route</span><strong>{selectedVehicle?.route}</strong><small>Driver: {selectedVehicle?.driver}</small></div>
+            <div><span>Packages</span><strong>{selectedVehicle?.packages}</strong></div>
           </div>
-
-          {/* Checklist */}
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-            Pre-departure Checklist
-          </div>
-
-          {[
-            { key: 'sealVerified' as const, label: 'Cargo seals verified and intact', icon: '🔒' },
-            { key: 'tempChecked' as const, label: selectedVehicle?.tempReq === 'Chilled' ? 'Freezer temperature confirmed ≤ 4°C' : 'Cargo properly secured (dry goods)', icon: selectedVehicle?.tempReq === 'Chilled' ? '❄️' : '📦' },
-            { key: 'manifestSigned' as const, label: 'Loading manifest signed by driver', icon: '📋' },
-            { key: 'safetyCheck' as const, label: 'Vehicle safety inspection passed', icon: '✅' },
-          ].map((item) => (
-            <label
-              key={item.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 14px',
-                borderRadius: 10,
-                border: '1px solid var(--border-light)',
-                cursor: 'pointer',
-                background: checklist[item.key] ? 'var(--status-good-bg)' : 'var(--bg-card)',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={checklist[item.key]}
-                onChange={(e) => setChecklist({ ...checklist, [item.key]: e.target.checked })}
-                style={{ width: 18, height: 18, accentColor: 'var(--purple-600)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: checklist[item.key] ? 'var(--status-good-text)' : 'var(--text-secondary)' }}>
-                {item.label}
-              </span>
+          <h3>Pre-departure checklist</h3>
+          {CHECKLIST_ITEMS.map((item) => (
+            <label className={`loader-checklist-item${checklist[item.key] ? ' checked' : ''}`} key={item.key}>
+              <input type="checkbox" checked={checklist[item.key]} onChange={(event) => setChecklist((current) => ({ ...current, [item.key]: event.target.checked }))} />
+              <span>{item.label}</span>
             </label>
           ))}
-
-          {!allChecked && (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', fontStyle: 'italic' }}>
-              Complete all checklist items to enable clearance
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-            <button className="btn-secondary" type="button" onClick={() => setIsClearanceModalOpen(false)}>
-              Cancel
-            </button>
-            <button
-              className="btn-primary"
-              type="button"
-              disabled={!allChecked}
-              onClick={handleConfirmClearance}
-              style={{ opacity: allChecked ? 1 : 0.5 }}
-            >
-              Confirm Clearance →
-            </button>
+          {!allChecked && <p className="loader-checklist-hint">Complete all checklist items to enable clearance.</p>}
+          <div className="loader-clearance-actions">
+            <button className="btn-secondary" type="button" onClick={() => setIsClearanceModalOpen(false)}>Cancel</button>
+            <button className="btn-primary" type="button" disabled={!allChecked} onClick={handleConfirmClearance}>Confirm clearance</button>
           </div>
         </div>
       </Modal>
