@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import deliveryVehicleImage from '../../assets/delivery-vehicle.png';
 
 // Radial Arc Gauge for Orders Delivered (e.g. 102 Deliveries completed)
 export function OrdersDeliveredGauge({ count = 102 }: { count?: number }) {
@@ -87,12 +88,7 @@ export function DeliveryVehiclesCard() {
           </div>
           <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
         </div>
-        <svg width="80" height="50" viewBox="0 0 100 60" fill="none">
-          <rect x="5" y="15" width="60" height="30" rx="4" fill="var(--purple-200)" />
-          <path d="M65 25 H85 L95 38 V45 H65 V25 Z" fill="var(--purple-300)" />
-          <circle cx="25" cy="45" r="7" fill="var(--purple-900)" />
-          <circle cx="75" cy="45" r="7" fill="var(--purple-900)" />
-        </svg>
+        <img className="delivery-vehicle-image" src={deliveryVehicleImage} alt="Delivery truck" />
       </div>
 
       <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>

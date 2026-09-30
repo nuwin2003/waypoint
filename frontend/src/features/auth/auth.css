@@ -11,7 +11,8 @@
 
 .login-card {
   width: min(480px, 100%);
-  height: min(794px, 74svh);
+  height: auto;
+  min-height: 0;
   padding: clamp(20px, 4vh, 40px) clamp(24px, 4vw, 48px);
   display: flex;
   flex-direction: column;
@@ -187,16 +188,17 @@
 .login-help svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 @media (max-width: 640px) {
-  .login-page { padding: 16px; align-items: start; }
+  .login-page { padding: 16px; place-items: center; }
   .login-card {
-    width: min(480px, 100%);
-    height: min(720px, calc(100svh - 32px));
+    width: min(420px, 100%);
+    height: auto;
+    min-height: 0;
     padding: 24px 26px 28px;
     border-radius: 16px;
   }
   .login-brand { font-size: 24px; }
   .login-brand img { width: 168px; }
-  .login-content { margin-top: clamp(32px, 7vh, 72px); }
+  .login-content { margin-top: clamp(28px, 6vh, 56px); }
   .login-heading h1 { font-size: 34px; }
   .login-heading p { font-size: 15px; }
   .login-form { gap: 16px; margin-top: 22px; }
@@ -233,7 +235,6 @@
   .login-brand img { width: 150px; }
   .login-brand { font-size: 22px; }
 }
-
 
 
 

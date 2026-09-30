@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { DeliveryVehiclesCard, DeliveryRateCard, OrdersDeliveredGauge, Modal } from '../../shared/ui/Components';
 import { api, Vehicle, PlanRunResult } from '../../api';
+import arrowIcon from '../../assets/arrow-icon.png';
+import './dispatcher.css';
 
 export function DispatcherWorkspace() {
   const { searchQuery } = (useOutletContext() as { searchQuery?: string }) || {};
@@ -56,13 +58,14 @@ export function DispatcherWorkspace() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="dispatcher-dashboard">
+      <div className="dispatcher-main-column">
       {/* Top 3 Stat Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+      <div className="dispatcher-stats">
         {/* Card 1: Orders in Queue */}
         <div className="card">
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Orders in Queue</div>
-          <div style={{ fontSize: 44, fontWeight: 900, color: 'var(--text-primary)', margin: '4px 0 12px', lineHeight: 1 }}>120</div>
+          <div style={{ fontSize: 44, fontWeight: 600, color: 'var(--text-primary)', margin: '4px 0 12px', lineHeight: 1 }}>120</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 4, background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
               TODAY <strong style={{ color: 'var(--text-primary)' }}>86</strong>
@@ -80,7 +83,7 @@ export function DispatcherWorkspace() {
             <div style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 8px' }}>* Confirmed, unassigned</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 44, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>54</div>
+            <div style={{ fontSize: 44, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>54</div>
             {/* Visual mini chart matching screenshot */}
             <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 28 }}>
               {[60, 80, 100, 90, 70, 50, 40, 30, 20, 10].map((h, i) => (
@@ -101,7 +104,7 @@ export function DispatcherWorkspace() {
         {/* Card 3: Deferred */}
         <div className="card">
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Deferred</div>
-          <div style={{ fontSize: 44, fontWeight: 900, color: 'var(--text-primary)', margin: '4px 0 12px', lineHeight: 1 }}>01</div>
+          <div style={{ fontSize: 44, fontWeight: 600, color: 'var(--text-primary)', margin: '4px 0 12px', lineHeight: 1 }}>01</div>
           <div>
             <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 4, background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
               TODAY <strong style={{ color: 'var(--text-primary)' }}>1</strong>
@@ -111,20 +114,19 @@ export function DispatcherWorkspace() {
       </div>
 
       {/* Action Banner Card */}
-      <div className="action-banner">
+      <div className="action-banner dispatcher-action-banner">
         <div className="action-banner-text">
           <h3>Orders close at 4:00 PM -- 54 orders ready to plan</h3>
           <p>Go to Planning & Allocation once the cutoff passes</p>
         </div>
-        <button className="btn-white" onClick={() => setIsPlanningModalOpen(true)} type="button">
-          Start planning {'->'}
+        <button className="btn-white dispatcher-plan-button" onClick={() => setIsPlanningModalOpen(true)} type="button">
+          Start planning <img src={arrowIcon} alt="" aria-hidden="true" />
         </button>
       </div>
 
       {/* Main Grid: Active Routes Table + Right Sidebar Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 20 }}>
+      <div className="table-card dispatcher-routes" style={{ height: 'fit-content' }}>
         {/* Left Side: Active Routes Table */}
-        <div className="table-card" style={{ height: 'fit-content' }}>
           <div className="table-header-title">
             <div>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>ACTIVE ROUTES</span>
@@ -162,15 +164,14 @@ export function DispatcherWorkspace() {
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* Right Side: Delivery vehicles, Delivery rate, Orders delivered */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <DeliveryVehiclesCard />
-          <DeliveryRateCard rate="76.6%" />
-          <OrdersDeliveredGauge count={102} />
-        </div>
       </div>
+      </div>
+
+      <aside className="dispatcher-rail" aria-label="Delivery metrics">
+        <DeliveryVehiclesCard />
+        <DeliveryRateCard rate="76.6%" />
+        <OrdersDeliveredGauge count={102} />
+      </aside>
 
       {/* Interactive Planning Engine Modal */}
       <Modal
