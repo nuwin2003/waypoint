@@ -1,8 +1,8 @@
-import { useState, FormEvent } from 'react';
+﻿import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/auth/AuthContext';
 import { api } from '../../api';
-import logoImg from '../../assets/logo.png';
+import logoImg from '../../assets/login-logo.png';
 import './auth.css';
 
 const rolePaths: Record<string, string> = {
@@ -18,6 +18,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [resetHelp, setResetHelp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,66 +50,64 @@ export function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-art">
-        <div className="login-brand">
-          <img src={logoImg} alt="Waypoint" />
-        </div>
-        <div className="login-art-copy">
-          <span className="login-eyebrow">Next-Gen Distribution Logistics</span>
-          <h1>Smart Route &amp; Fleet Management</h1>
-          <p>Real-time route planning, multi-temperature loading verification, store receiving, and driver telemetry - all in one unified control system.</p>
-        </div>
-        <div className="login-art-footer">
-          <span>© 2026 Waypoint Logistics</span>
-          <span>v2.4.0 · Enterprise Edition</span>
-        </div>
-      </div>
+    <main className="login-page">
+      <section className="login-card" aria-labelledby="login-title">
+        <a className="login-brand" href="/" aria-label="Waypoint Group home">
+          <img src={logoImg} alt="" />
+        </a>
 
-      <div className="login-panel">
-        <div className="login-heading">
-          <h2>Sign in to Waypoint</h2>
-          <p>Enter your account credentials to continue.</p>
-        </div>
+        <div className="login-content">
+          <div className="login-heading">
+            <h1 id="login-title">Welcome back</h1>
+            <p>Sign in to continue your delivery day.</p>
+          </div>
 
-        <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
-          {error && <div className="login-error" role="alert">{error}</div>}
-          <label>
-            Email Address
-            <input
-              type="email"
-              required
-              autoComplete="off"
-              placeholder="user@waypoint.lk"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
+          <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
+            {error && <div className="login-error" role="alert">{error}</div>}
+            <label>
+              Email address
+              <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </label>
 
-          <label>
-            Password
-            <div className="password-field">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoComplete="new-password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                {showPassword ? 'Hide' : 'Show'}
+            <label>
+              Password
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8"/><path d="M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.2 8.8 7a9.8 9.8 0 01-2.5 3.5M6.2 6.3C3.8 7.9 2.4 10.5 2.4 12c0 1.8 3.8 7 9.6 7 1.2 0 2.3-.3 3.3-.7"/></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.4 12s3.6-7 9.6-7 9.6 7 9.6 7-3.6 7-9.6 7-9.6-7-9.6-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
+            </label>
+
+            <div className="login-form-actions">
+              <button className="forgot-password" type="button" onClick={() => setResetHelp((visible) => !visible)} aria-expanded={resetHelp}>
+                Forgot password?
               </button>
             </div>
-          </label>
+            {resetHelp && <p className="reset-help" role="status">Please contact your Waypoint administrator to reset your password.</p>}
 
-          <button type="submit" className="btn btn-primary login-button" disabled={loading}>
-            {loading ? <><span className="spinner" /> Signing in…</> : 'Sign In'}
-          </button>
-        </form>
+            <button type="submit" className="btn btn-primary login-button" disabled={loading}>
+              {loading ? <><span className="spinner" /> Signing in…</> : 'Sign in'}
+            </button>
+          </form>
 
-        <div className="login-help">Protected by Enterprise Security · SSL Encrypted Session</div>
-      </div>
-    </div>
+          <div className="login-help">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3M12 14v3"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+            <span>Your account is protected.</span>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
