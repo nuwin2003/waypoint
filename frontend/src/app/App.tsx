@@ -16,6 +16,11 @@ import { EmergencyPage } from '../features/dispatcher/pages/EmergencyPage';
 import { DispatcherHistoryPage } from '../features/dispatcher/pages/DispatcherHistoryPage';
 import { LoaderWorkspace } from '../features/loader/LoaderWorkspace';
 import { StoreWorkspace } from '../features/store/StoreWorkspace';
+import { StoreDashboardPage } from '../features/store/pages/StoreDashboardPage';
+import { PlaceOrderPage } from '../features/store/pages/PlaceOrderPage';
+import { TrackOrdersPage } from '../features/store/pages/TrackOrdersPage';
+import { ReceiveConfirmPage } from '../features/store/pages/ReceiveConfirmPage';
+import { OrderHistoryPage } from '../features/store/pages/OrderHistoryPage';
 import { DriverWorkspace } from '../features/driver/DriverWorkspace';
 
 function RootRedirect() {
@@ -69,9 +74,14 @@ export default function App() {
           <Route path="/load" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
           <Route path="/load/*" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
 
-          {/* Storekeeper */}
-          <Route path="/store" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>} />
-          <Route path="/store/*" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>} />
+          {/* Store Manager */}
+          <Route path="/store" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>}>
+            <Route index element={<StoreDashboardPage />} />
+            <Route path="place-order" element={<PlaceOrderPage />} />
+            <Route path="track" element={<TrackOrdersPage />} />
+            <Route path="receive" element={<ReceiveConfirmPage />} />
+            <Route path="history" element={<OrderHistoryPage />} />
+          </Route>
 
           {/* Driver */}
           <Route path="/drive" element={<RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>} />
