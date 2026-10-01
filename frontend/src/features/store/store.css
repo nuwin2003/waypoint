@@ -256,11 +256,11 @@
 .store-item-name { display: flex !important; align-items: center; gap: 12px !important; margin-bottom: 12px; font-size: 15px !important; }
 .store-item-name input { width: 20px; height: 20px; accent-color: #6935ea; }
 .store-condition-options { display: flex; flex-wrap: wrap; gap: 10px; margin-left: 28px; }
-.store-condition-options button, .store-proof-actions > button, .store-proof-upload { min-height: 42px; padding: 0 16px; border: 1px solid #dfe8e3; border-radius: 10px; background: #fff; color: #43534d; font: 400 14px var(--font-sans); cursor: pointer; }
+.store-condition-options button, .store-proof-actions > button, .store-page .store-proof-upload { min-height: 42px; padding: 0 16px; border: 1px solid #dfe8e3; border-radius: 10px; background: #fff; color: #43534d; font: 400 14px var(--font-sans); cursor: pointer; }
 .store-condition-options button.selected, .store-proof-actions .selected, .store-proof-upload.selected { border-color: #6935ea; background: #6935ea; color: #fff; }
 .store-proof-section { margin-top: 42px; }
 .store-proof-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.store-proof-actions > button, .store-proof-upload { display: inline-flex; align-items: center; gap: 10px; }
+.store-proof-actions > button, .store-page .store-proof-upload { display: inline-flex; align-items: center; gap: 10px; }
 .store-proof-actions img { display: block; width: 18px; height: 18px; flex: 0 0 18px; object-fit: contain; }
 .store-proof-actions .selected img { filter: brightness(0) invert(1); }
 .store-proof-upload input { display: none; }
