@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../auth/AuthContext';
 import logoImg from '../../assets/logo.png';
 import logoShortImg from '../../assets/logo-short.png';
+import darkModeImg from '../../assets/dark-mode.png';
 import dashboardGray from '../../assets/sidebar/dashboard-gray.png';
 import dashboardPurple from '../../assets/sidebar/dashboard-purple.png';
 import defectItemsGray from '../../assets/sidebar/defect-items-gray.png';
@@ -148,7 +149,9 @@ export function AppShell() {
           <input type="search" placeholder="Search routes, orders, vehicles…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
         <div className="header-actions">
-          <button className="icon-btn" onClick={toggleDark} type="button" aria-label="Toggle dark mode"><Icon name={darkMode ? 'sun' : 'moon'} /></button>
+          <button className="icon-btn" onClick={toggleDark} type="button" aria-label="Toggle dark mode">
+            {darkMode ? <Icon name="sun" /> : <img className="dark-mode-icon" src={darkModeImg} alt="" />}
+          </button>
           <button className="icon-btn notification-btn" type="button" aria-label="Notifications"><Icon name="bell" /><span className="badge-dot" /></button>
           <div className="profile-menu-wrap">
             <button className="user-profile-bubble" title={user?.displayName} aria-label="Profile menu" aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)} type="button">{initials}</button>
