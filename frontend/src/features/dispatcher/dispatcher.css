@@ -1,0 +1,74 @@
+.dispatcher-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 20px;
+}
+
+.dispatcher-main-column,
+.dispatcher-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dispatcher-rail > .card { min-width: 0; }
+
+.dispatcher-main-column > .action-banner { margin-bottom: 0; }
+
+.dispatcher-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.dispatcher-action-banner {
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 12px 16px;
+}
+
+.dispatcher-action-banner h3 {
+  font-size: 14px;
+}
+
+.dispatcher-action-banner p { font-size: 11px; }
+
+.dispatcher-plan-button {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  font-size: 12px;
+}
+
+.dispatcher-plan-button img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.dispatcher-routes { min-width: 0; }
+
+.delivery-vehicle-image {
+  display: block;
+  width: 90px;
+  height: 56px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+@media (max-width: 1150px) {
+  .dispatcher-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dispatcher-stats { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .dispatcher-stats { grid-template-columns: minmax(0, 1fr); }
+  .dispatcher-action-banner { align-items: flex-start; }
+  .dispatcher-action-banner h3 { font-size: 13px; }
+  .dispatcher-plan-button { padding: 8px 10px; font-size: 11px; }
+}

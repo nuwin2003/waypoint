@@ -1,0 +1,291 @@
+.loader-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--text-primary);
+}
+
+.loader-clearance-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  background: var(--status-good-bg);
+  color: var(--status-good-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.loader-clearance-notice button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.loader-vehicle-dashboard { display: flex; flex-direction: column; gap: 24px; }
+.loader-dashboard-heading h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.03em; }
+.loader-dashboard-heading p { margin: 3px 0 0; color: var(--text-secondary); font-size: 13px; }
+.loader-dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.loader-dashboard-stat { min-width: 0; display: grid; justify-items: start; gap: 7px; padding: 18px 20px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-secondary); text-align: left; font-family: var(--font-sans); cursor: pointer; box-shadow: 0 3px 8px rgba(31, 21, 51, .035); }
+.loader-dashboard-stat:hover,
+.loader-dashboard-stat.selected { border-color: var(--purple-300); }
+.loader-dashboard-stat > span { font-size: 16px; font-weight: 500; }
+.loader-dashboard-stat > strong { color: var(--text-primary); font-size: 38px; line-height: 1; font-weight: 700; }
+.loader-dashboard-stat > small { color: var(--text-secondary); font-size: 15px; font-weight: 500; }
+.loader-dashboard-stat:first-child > small { font-weight: 600; }
+
+.loader-filter-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 4px 2px; }
+.loader-filter-pills button { min-height: 34px; padding: 6px 13px; border: 1px solid var(--border-light); border-radius: 9px; background: var(--bg-card); color: var(--text-primary); font: inherit; font-size: 11px; cursor: pointer; }
+.loader-filter-pills button:hover { border-color: var(--purple-300); }
+.loader-filter-pills button.active { border-color: var(--purple-600); background: var(--purple-600); color: #fff; }
+.loader-queue-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: -12px; }
+.loader-queue-heading h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.loader-queue-heading > span { color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+.loader-vehicle-queue { overflow: hidden; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); box-shadow: 0 3px 8px rgba(31, 21, 51, .035); }
+.loader-queue-row { width: 100%; min-height: 76px; display: grid; grid-template-columns: minmax(175px, 1fr) minmax(190px, 1fr) minmax(150px, .9fr) minmax(90px, .7fr) 18px; align-items: center; gap: 12px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--border-light); background: var(--bg-card); color: var(--text-primary); text-align: left; font: inherit; cursor: pointer; }
+.loader-queue-row:last-child { border-bottom: 0; }
+.loader-queue-row:hover { background: var(--bg-subtle); }
+.loader-queue-row.selected { background: var(--purple-100); }
+.loader-queue-vehicle { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.loader-queue-vehicle > i { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 9px; background: var(--bg-subtle); color: var(--text-secondary); }
+.loader-queue-row.selected .loader-queue-vehicle > i { background: var(--purple-600); color: #fff; }
+.loader-queue-vehicle svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.loader-queue-vehicle > span,
+.loader-queue-route,
+.loader-queue-progress { display: grid; gap: 3px; min-width: 0; }
+.loader-queue-vehicle strong,
+.loader-queue-route strong,
+.loader-queue-progress strong { overflow: hidden; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.loader-queue-vehicle small,
+.loader-queue-route small,
+.loader-queue-progress small { color: var(--text-secondary); font-size: 11px; }
+.loader-queue-status { justify-self: start; padding: 4px 9px; border-radius: 5px; background: var(--bg-subtle); color: var(--text-secondary); font-size: 10px; white-space: nowrap; }
+.loader-queue-status.loading { background: var(--status-info-bg); color: var(--status-info-text); }
+.loader-queue-status.ready { background: var(--status-purple-bg); color: var(--status-purple-text); }
+.loader-queue-status.flagged { background: var(--status-danger-bg); color: var(--status-danger-text); }
+.loader-queue-row > .loader-chevron { width: 18px; height: 18px; color: var(--text-muted); }
+
+.loader-truck-header,
+.loader-heading-group,
+.loader-vehicle-controls {
+  display: flex;
+  align-items: center;
+}
+
+.loader-truck-header { justify-content: space-between; gap: 16px; }
+.loader-heading-group { gap: 20px; min-width: 0; }
+
+.loader-truck-header h1 {
+  margin: 0;
+  font-size: clamp(24px, 2.6vw, 30px);
+  font-weight: 500;
+  letter-spacing: -.035em;
+}
+
+.loader-back-button,
+.loader-vehicle-controls button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--purple-600);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--purple-600);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.loader-back-button { width: 34px; height: 40px; border: 0; background: transparent; }
+.loader-back-button:hover,
+.loader-vehicle-controls button:hover { background: var(--purple-600); color: #fff; }
+.loader-vehicle-controls { gap: 12px; }
+.loader-chevron { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.loader-chevron.right { transform: rotate(180deg); }
+
+.loader-truck-overview {
+  display: grid;
+  grid-template-columns: minmax(340px, 392px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 20px;
+}
+
+.loader-truck-details { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.loader-info-card,
+.loader-capacity-card,
+.loader-shipment-card {
+  border: 1px solid var(--border-light);
+  border-radius: 18px;
+  background: var(--bg-card);
+  box-shadow: 0 2px 6px rgba(31, 21, 51, .035);
+}
+
+.loader-info-card { padding: 18px; }
+.loader-info-card-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.loader-info-card-title > strong { font-size: 16px; font-weight: 700; }
+
+.loader-status-pill,
+.loader-shipment-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.loader-status-pill i,
+.loader-shipment-type i { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+.loader-status-pill.ready i { background: #16a34a; }
+.loader-status-pill.flagged i { background: #dc2626; }
+.loader-status-pill.not-started i { background: #94a3b8; }
+
+.loader-driver-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--border-light); }
+.loader-driver-avatar { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; background: var(--bg-subtle); color: var(--purple-700); font-size: 15px; font-weight: 600; }
+.loader-driver-name { display: grid; gap: 2px; min-width: 0; }
+.loader-driver-name span,
+.loader-vehicle-facts span,
+.loader-capacity-numbers span { color: var(--text-muted); font-size: 10px; }
+.loader-driver-name strong { overflow: hidden; color: var(--text-primary); font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.loader-clear-button { margin-left: auto; padding: 7px 9px; border: 0; border-radius: 7px; background: var(--status-good-bg); color: var(--status-good-text); font-size: 10px; font-weight: 600; cursor: pointer; }
+.loader-issue-note { margin-left: auto; color: var(--status-danger-text); font-size: 11px; }
+
+.loader-vehicle-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 16px 0; border-bottom: 1px dashed var(--border-light); }
+.loader-vehicle-facts > div { display: grid; justify-items: center; gap: 4px; padding: 0 6px; text-align: center; }
+.loader-vehicle-facts > div + div { border-left: 1px solid var(--border-light); }
+.loader-vehicle-facts strong { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+.loader-route-line { display: grid; grid-template-columns: minmax(0, 1fr) minmax(36px, .9fr) minmax(0, 1fr); align-items: center; gap: 8px; padding-top: 15px; }
+.loader-route-line > div { display: grid; gap: 2px; min-width: 0; }
+.loader-route-line > div strong { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.loader-route-line > div span { color: var(--text-muted); font-size: 10px; }
+.loader-route-line > .destination { text-align: right; }
+.loader-route-track { display: flex; align-items: center; height: 20px; border-top: 2px dashed #e4ddd3; }
+.loader-route-track i { display: grid; place-items: center; width: 22px; height: 22px; margin: -11px auto 0; border: 1px solid var(--border-subtle); border-radius: 50%; background: var(--bg-card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.loader-route-track i::after { content: ''; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid var(--text-primary); }
+
+.loader-capacity-card { padding: 18px; }
+.loader-capacity-card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+.loader-capacity-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.loader-capacity-ring { position: relative; width: 100px; height: 100px; flex: 0 0 100px; }
+.loader-capacity-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.loader-capacity-ring circle { fill: none; stroke-width: 5; }
+.loader-capacity-track { stroke: var(--bg-hover); }
+.loader-capacity-value { stroke: var(--purple-500); stroke-linecap: round; transition: stroke-dashoffset .25s ease; }
+.loader-capacity-ring > div { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.loader-capacity-ring strong { font-size: 19px; font-weight: 600; }
+.loader-capacity-ring span { color: var(--text-muted); font-size: 10px; }
+.loader-capacity-numbers { display: grid; gap: 14px; min-width: 100px; }
+.loader-capacity-numbers > div { display: grid; gap: 2px; }
+.loader-capacity-numbers strong { font-size: 19px; font-weight: 600; }
+.loader-capacity-numbers small { color: var(--text-muted); font-size: 11px; font-weight: 400; }
+
+.loader-truck-visual { display: grid; place-items: center; min-width: 0; min-height: 420px; }
+.loader-truck-visual img { display: block; width: 100%; max-height: 465px; object-fit: contain; }
+
+.loader-sequence { display: flex; flex-direction: column; gap: 18px; }
+.loader-sequence-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.loader-sequence-header h2 { margin: 0; font-size: clamp(23px, 2.6vw, 28px); font-weight: 500; letter-spacing: -.03em; }
+.loader-sequence-controls { display: flex; align-items: center; gap: 10px; }
+.loader-shipment-search,
+.loader-toolbar-button { height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 11px; background: var(--bg-card); color: var(--text-secondary); font: inherit; font-size: 12px; }
+.loader-shipment-search { width: min(220px, 24vw); }
+.loader-shipment-search svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: var(--text-muted); stroke-width: 1.7; stroke-linecap: round; }
+.loader-shipment-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.loader-shipment-search input::placeholder { color: var(--text-muted); }
+.loader-toolbar-button { cursor: pointer; white-space: nowrap; }
+.loader-toolbar-button:hover,
+.loader-toolbar-button.active { border-color: var(--purple-300); color: var(--purple-700); }
+.loader-grid-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+
+.loader-shipment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.loader-shipment-grid.list-view { grid-template-columns: minmax(0, 1fr); }
+.loader-shipment-card { min-width: 0; padding: 16px; border: 1px solid var(--border-light); border-radius: 13px; background: var(--bg-card); box-shadow: 0 2px 4px rgba(31, 21, 51, .035); }
+.loader-shipment-card.scanned { border-color: #86efac; }
+.loader-shipment-card.missing { border-color: #fca5a5; }
+.loader-shipment-card-heading { display: flex; align-items: center; gap: 9px; padding-bottom: 12px; border-bottom: 1px dashed var(--border-light); }
+.loader-package-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border: 1px solid var(--border-light); border-radius: 9px; color: var(--text-muted); }
+.loader-package-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.loader-shipment-card-heading > strong { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.loader-shipment-type { margin-left: auto; background: var(--bg-subtle); font-size: 10px; }
+.loader-shipment-type i { width: 6px; height: 6px; background: #94a3b8; }
+.loader-shipment-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; padding: 14px 0; }
+.loader-shipment-details > div { display: grid; gap: 4px; min-width: 0; }
+.loader-shipment-details span { color: var(--text-muted); font-size: 10px; }
+.loader-shipment-details strong { overflow: hidden; font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.loader-shipment-feedback { margin-bottom: 10px; color: var(--text-muted); font-size: 11px; }
+.loader-shipment-card.scanned .loader-shipment-feedback { color: var(--status-good-text); }
+.loader-shipment-card.missing .loader-shipment-feedback { color: var(--status-danger-text); }
+.loader-shipment-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.loader-shipment-actions button { min-height: 38px; padding: 8px 14px; border: 0; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.loader-scan-button { background: var(--purple-600); color: #fff; }
+.loader-scan-button:hover { background: var(--purple-700); }
+.loader-scan-button:disabled { background: var(--status-good-bg); color: var(--status-good-text); cursor: default; }
+.loader-missing-button { min-width: 94px; background: var(--purple-100); color: var(--purple-700); }
+.loader-missing-button:hover { background: var(--purple-200); }
+.loader-empty-state { grid-column: 1 / -1; margin: 0; padding: 28px; border: 1px dashed var(--border-light); border-radius: 12px; color: var(--text-muted); text-align: center; }
+
+.loader-clearance-modal { display: flex; flex-direction: column; gap: 12px; }
+.loader-clearance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px; border-radius: 10px; background: var(--bg-subtle); }
+.loader-clearance-summary > div { display: grid; align-content: start; gap: 4px; min-width: 0; }
+.loader-clearance-summary span { color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+.loader-clearance-summary strong { overflow-wrap: anywhere; font-size: 13px; font-weight: 600; }
+.loader-clearance-summary small { color: var(--text-secondary); font-size: 11px; }
+.loader-clearance-modal h3 { margin: 4px 0 0; font-size: 14px; font-weight: 600; }
+.loader-checklist-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-light); border-radius: 9px; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.loader-checklist-item.checked { border-color: #86efac; background: var(--status-good-bg); color: var(--status-good-text); }
+.loader-checklist-item input { width: 16px; height: 16px; accent-color: var(--purple-600); }
+.loader-checklist-hint { margin: 0; color: var(--text-muted); font-size: 11px; text-align: center; }
+.loader-clearance-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+@media (max-width: 1100px) {
+  .loader-dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .loader-truck-overview { grid-template-columns: minmax(290px, .85fr) minmax(0, 1.15fr); gap: 14px; }
+  .loader-truck-visual { min-height: 360px; }
+  .loader-shipment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .loader-workspace { gap: 20px; }
+  .loader-dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .loader-queue-row { grid-template-columns: minmax(0, 1fr) auto 18px; gap: 10px; }
+  .loader-queue-route { grid-column: 1; margin-left: 52px; }
+  .loader-queue-progress { grid-column: 1; margin-left: 52px; }
+  .loader-queue-status { grid-column: 2; grid-row: 1; }
+  .loader-queue-row > .loader-chevron { grid-column: 3; grid-row: 1; }
+  .loader-truck-overview { grid-template-columns: minmax(0, 1fr); }
+  .loader-truck-visual { order: -1; min-height: 0; max-height: 320px; }
+  .loader-truck-visual img { max-height: 320px; }
+  .loader-sequence-header { align-items: flex-start; flex-direction: column; }
+  .loader-sequence-controls { width: 100%; flex-wrap: wrap; }
+  .loader-shipment-search { flex: 1 1 200px; width: auto; }
+}
+
+@media (max-width: 560px) {
+  .loader-dashboard-stats { gap: 8px; }
+  .loader-dashboard-stat { padding: 14px; }
+  .loader-queue-heading h2 { font-size: 19px; }
+  .loader-queue-heading > span { font-size: 12px; }
+  .loader-truck-header h1 { font-size: 24px; }
+  .loader-heading-group { gap: 8px; }
+  .loader-back-button { width: 28px; }
+  .loader-vehicle-controls { gap: 6px; }
+  .loader-vehicle-controls button { width: 38px; height: 38px; }
+  .loader-truck-visual { max-height: 250px; }
+  .loader-truck-visual img { max-height: 250px; }
+  .loader-shipment-grid { grid-template-columns: minmax(0, 1fr); }
+  .loader-capacity-content { justify-content: space-around; }
+  .loader-sequence-controls { gap: 7px; }
+  .loader-toolbar-button { padding-inline: 9px; }
+  .loader-clearance-summary { grid-template-columns: 1fr; }
+}

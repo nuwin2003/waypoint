@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import deliveryVehicleImage from '../../assets/delivery-vehicle.png';
 
 // Radial Arc Gauge for Orders Delivered (e.g. 102 Deliveries completed)
 export function OrdersDeliveredGauge({ count = 102 }: { count?: number }) {
@@ -14,7 +15,7 @@ export function OrdersDeliveredGauge({ count = 102 }: { count?: number }) {
           <circle cx="85" cy="85" r="70" fill="none" stroke="var(--purple-600)" strokeWidth="16" strokeDasharray="165 220" strokeLinecap="round" />
         </svg>
         <div style={{ position: 'absolute', bottom: 0, textAlign: 'center' }}>
-          <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{count}</span>
+          <span style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{count}</span>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, fontWeight: 600 }}>Deliveries completed</p>
         </div>
       </div>
@@ -39,7 +40,7 @@ export function DeliveryRateCard({ rate = '76.6%' }: { rate?: string }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Delivery rate</span>
-          <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-primary)', marginTop: 4 }}>{rate}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{rate}</div>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>than last week</span>
         </div>
         <select style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border-light)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 600 }}>
@@ -85,14 +86,9 @@ export function DeliveryVehiclesCard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--status-good-text)', fontWeight: 700 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} /> On-route
           </div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
         </div>
-        <svg width="80" height="50" viewBox="0 0 100 60" fill="none">
-          <rect x="5" y="15" width="60" height="30" rx="4" fill="var(--purple-200)" />
-          <path d="M65 25 H85 L95 38 V45 H65 V25 Z" fill="var(--purple-300)" />
-          <circle cx="25" cy="45" r="7" fill="var(--purple-900)" />
-          <circle cx="75" cy="45" r="7" fill="var(--purple-900)" />
-        </svg>
+        <img className="delivery-vehicle-image" src={deliveryVehicleImage} alt="Delivery truck" />
       </div>
 
       <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>

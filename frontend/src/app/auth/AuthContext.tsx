@@ -2,6 +2,19 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 export type UserRole = 'DISPATCHER' | 'STOREKEEPER' | 'LOADER' | 'DRIVER';
 
+export function isUserRole(value: unknown): value is UserRole {
+  return value === 'DISPATCHER' || value === 'STOREKEEPER' || value === 'LOADER' || value === 'DRIVER';
+}
+
+export function roleHomePath(role: UserRole): string {
+  switch (role) {
+    case 'STOREKEEPER': return '/store';
+    case 'LOADER': return '/load';
+    case 'DRIVER': return '/drive';
+    case 'DISPATCHER': return '/dispatch';
+  }
+}
+
 export interface AuthUser {
   email: string;
   displayName: string;
@@ -12,7 +25,6 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   setUser: (u: AuthUser | null) => void;
-  switchRole: (role: UserRole) => void;
   logout: () => void;
 }
 
@@ -24,7 +36,19 @@ function loadFromStorage(): AuthUser | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as AuthUser;
+    const value: unknown = JSON.parse(raw);
+    if (
+      typeof value === 'object' && value !== null &&
+      'email' in value && typeof value.email === 'string' &&
+      'displayName' in value && typeof value.displayName === 'string' &&
+      'accessToken' in value && typeof value.accessToken === 'string' && value.accessToken.length > 0 &&
+      'role' in value && isUserRole(value.role)
+    ) {
+      return value as AuthUser;
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('waypoint.token');
+    return null;
   } catch {
     return null;
   }
@@ -46,16 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setUser = (u: AuthUser | null) => setUserState(u);
 
-  const switchRole = (role: UserRole) => {
-    if (!user) return;
-    const updated = { ...user, role };
-    setUser(updated);
-  };
-
   const logout = () => setUser(null);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, switchRole, logout }}>
+    <AuthContext.Provider value={{ user, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
