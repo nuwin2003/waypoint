@@ -370,6 +370,24 @@ html, body {
   margin-bottom: 24px;
 }
 
+.sidebar-workspace {
+  display: grid;
+  gap: 5px;
+  margin: 6px 8px 22px;
+}
+
+.sidebar-workspace span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sidebar-workspace strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
 .workspace-label {
   font-size: 11px;
   font-weight: 700;
@@ -442,11 +460,26 @@ html, body {
 .nav-link .nav-icon {
   font-size: 16px;
   width: 20px;
+  height: 20px;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 .nav-icon svg { display: block; flex: 0 0 auto; }
+.nav-icon img, .nav-icon-box img { display: block; width: 24px; height: 24px; object-fit: contain; flex: 0 0 auto; }
 .nav-label { white-space: nowrap; }
+
+.logout-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #ef5350;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logout-link:hover { color: #d93636; background-color: rgba(239, 83, 80, 0.08); }
 
 @media (min-width: 1025px) {
   .sidebar.collapsed {
@@ -455,6 +488,10 @@ html, body {
   }
 
   .sidebar.collapsed .nav-label {
+    display: none;
+  }
+
+  .sidebar.collapsed .sidebar-workspace {
     display: none;
   }
 
