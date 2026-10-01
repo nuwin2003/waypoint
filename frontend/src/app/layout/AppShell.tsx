@@ -4,6 +4,7 @@ import { useAuth, UserRole } from '../auth/AuthContext';
 import logoImg from '../../assets/logo.png';
 import logoShortImg from '../../assets/logo-short.png';
 import darkModeImg from '../../assets/dark-mode.png';
+import settingsIcon from '../../assets/settings-icon.png';
 import dashboardGray from '../../assets/sidebar/dashboard-gray.png';
 import dashboardPurple from '../../assets/sidebar/dashboard-purple.png';
 import defectItemsGray from '../../assets/sidebar/defect-items-gray.png';
@@ -173,7 +174,7 @@ export function AppShell() {
             </NavLink>)}
           </nav>
           <div className="sidebar-footer">
-            <NavLink to="/settings" className="nav-link" onClick={() => setSidebarOpen(false)} aria-label="Settings" title={sidebarCollapsed ? 'Settings' : undefined}><span className="nav-icon"><Icon name="settings" /></span><span className="nav-label">Settings</span></NavLink>
+            <NavLink to="/settings" className="nav-link" onClick={() => setSidebarOpen(false)} aria-label="Settings" title={sidebarCollapsed ? 'Settings' : undefined}><span className="nav-icon"><img src={settingsIcon} alt="" /></span><span className="nav-label">Settings</span></NavLink>
             <NavLink to="/help" className="nav-link" onClick={() => setSidebarOpen(false)} aria-label="Help" title={sidebarCollapsed ? 'Help' : undefined}><span className="nav-icon"><Icon name="help" /></span><span className="nav-label">Help</span></NavLink>
             <button className="nav-link logout-link" onClick={handleSignOut} type="button"><span className="nav-icon"><Icon name="logout" /></span><span className="nav-label">Log out</span></button>
           </div>
