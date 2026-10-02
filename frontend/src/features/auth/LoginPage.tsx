@@ -13,12 +13,12 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetHelp, setResetHelp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState('');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setLoginError('');
 
     try {
       const res = await api.login(email.trim(), password);
@@ -33,13 +33,7 @@ export function LoginPage() {
       });
       navigate(roleHomePath(res.role), { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      try {
-        const payload = JSON.parse(message) as { detail?: string; message?: string };
-        setError(payload.detail || payload.message || 'Unable to sign in. Please try again.');
-      } catch {
-        setError(message || 'Unable to sign in. Please try again.');
-      }
+      setLoginError(err instanceof Error ? err.message : 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -59,7 +53,6 @@ export function LoginPage() {
           </div>
 
           <form className="login-form" onSubmit={handleSubmit} autoComplete="on">
-            {error && <div className="login-error" role="alert">{error}</div>}
             <label>
               Email address
               <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -91,6 +84,8 @@ export function LoginPage() {
               </button>
             </div>
             {resetHelp && <p className="reset-help" role="status">Please contact your Waypoint administrator to reset your password.</p>}
+
+            {loginError && <p className="login-error" role="alert">{loginError}</p>}
 
             <button type="submit" className="btn btn-primary login-button" disabled={loading}>
               {loading ? <><span className="spinner" /> Signing in…</> : 'Sign in'}

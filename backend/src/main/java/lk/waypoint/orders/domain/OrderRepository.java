@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface OrderRepository {
     void save(Order order);
     List<Order> findByOutletAndDate(String outletId, LocalDate orderDate);
+    List<Order> findByOutlet(String outletId);
     Optional<String> findActiveOutletForUser(String email);
     boolean canUserAccessOutlet(String email, String outletId);
 }

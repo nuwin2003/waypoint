@@ -43,14 +43,16 @@ public class OrderApplicationService {
 
     @Transactional(readOnly = true)
     public List<Order> list(String outletId, LocalDate orderDate) {
-        return repository.findByOutletAndDate(outletId, orderDate);
+        return orderDate == null ? repository.findByOutlet(outletId)
+                : repository.findByOutletAndDate(outletId, orderDate);
     }
 
     @Transactional(readOnly = true)
     public List<Order> listForUser(String email, LocalDate orderDate) {
         String outletId = repository.findActiveOutletForUser(email).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to an active outlet"));
-        return repository.findByOutletAndDate(outletId, orderDate);
+        return orderDate == null ? repository.findByOutlet(outletId)
+                : repository.findByOutletAndDate(outletId, orderDate);
     }
 
     @Transactional(readOnly = true)
@@ -58,6 +60,7 @@ public class OrderApplicationService {
         if (!repository.canUserAccessOutlet(email, outletId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this outlet");
         }
-        return repository.findByOutletAndDate(outletId, orderDate);
+        return orderDate == null ? repository.findByOutlet(outletId)
+                : repository.findByOutletAndDate(outletId, orderDate);
     }
 }

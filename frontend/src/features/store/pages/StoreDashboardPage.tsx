@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { api, type Order } from '../../../api';
 import storeManagerHero from '../../../assets/store-manager-hero.png';
 import expectedDelivery from '../../../assets/expected-delivery.png';
 import arrowIcon from '../../../assets/arrow-icon.png';
@@ -8,12 +10,15 @@ export function StoreDashboardPage() {
   const { searchQuery } = (useOutletContext() as { searchQuery?: string }) || {};
   const navigate = useNavigate();
 
-  const initialOrders = [
-    { id: 'O-0988', day: 'Fri 25 Sep', type: 'dry', units: 34, invoice: 'INV-2210', status: 'delivered' },
-    { id: 'O-0989', day: 'Fri 25 Sep', type: 'chilled', units: 12, invoice: '--', status: 'deferred' },
-    { id: 'O-0954', day: 'Thu 24 Sep', type: 'dry', units: 30, invoice: 'INV-2198', status: 'delivered' },
-    { id: 'O-0955', day: 'Thu 24 Sep', type: 'chilled', units: 15, invoice: 'INV-2199', status: 'delivered' },
-  ];
+  const [initialOrders, setInitialOrders] = useState<Array<{ id: string; day: string; type: string; units: number; invoice: string; status: string }>>([]);
+  useEffect(() => {
+    api.orders().then((orders) => setInitialOrders(orders.map((order: Order) => {
+      const raw = order.status.toUpperCase();
+      const status = /DELIVER|RECEIV/.test(raw) ? 'delivered' : /DEFER|NEXT_RUN/.test(raw) ? 'deferred' : /TRANSIT|DEPART/.test(raw) ? 'in transit' : /LOAD|PLAN/.test(raw) ? 'confirmed' : 'submitted';
+      const type = order.productBrand === 'FRESH' ? (order.tempRequirement === 'CHILLED' ? 'chilled' : 'dry') : order.productBrand.toLowerCase();
+      return { id: order.orderRef, day: order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Date unavailable', type, units: order.units, invoice: '—', status };
+    }))).catch(() => setInitialOrders([]));
+  }, []);
 
   const filteredOrders = initialOrders.filter((order) => {
     if (!searchQuery) return true;
@@ -65,7 +70,7 @@ export function StoreDashboardPage() {
           <div className="stat-card">
             <div>
               <div className="stat-card-title">Submitted</div>
-              <div className="stat-card-value">2</div>
+              <div className="stat-card-value">{initialOrders.filter((order) => order.status === 'submitted').length}</div>
               <div className="stat-card-meta">Awaiting confirmation</div>
             </div>
             <div className="stat-card-icon">
@@ -80,7 +85,7 @@ export function StoreDashboardPage() {
           <div className="stat-card">
             <div>
               <div className="stat-card-title">Confirmed</div>
-              <div className="stat-card-value">2</div>
+              <div className="stat-card-value">{initialOrders.filter((order) => order.status === 'confirmed').length}</div>
               <div className="stat-card-meta">Accepted for planning</div>
             </div>
             <div className="stat-card-icon">
@@ -95,7 +100,7 @@ export function StoreDashboardPage() {
           <div className="stat-card">
             <div>
               <div className="stat-card-title">In transit</div>
-              <div className="stat-card-value">1</div>
+              <div className="stat-card-value">{initialOrders.filter((order) => order.status === 'in transit').length}</div>
               <div className="stat-card-meta">On the way now</div>
             </div>
             <div className="stat-card-icon">
@@ -112,7 +117,7 @@ export function StoreDashboardPage() {
           <div className="stat-card">
             <div>
               <div className="stat-card-title">Delivered</div>
-              <div className="stat-card-value">1</div>
+              <div className="stat-card-value">{initialOrders.filter((order) => order.status === 'delivered').length}</div>
               <div className="stat-card-meta">Delivered today</div>
             </div>
             <div className="stat-card-icon">
@@ -134,14 +139,14 @@ export function StoreDashboardPage() {
               NEXT EXPECTED DELIVERY
             </span>
             <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'var(--status-info-bg)', color: 'var(--status-info-text)' }}>
-              Live ETA
+              ETA unavailable
             </span>
           </div>
           <div style={{ fontSize: 38, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
-            07:45
+            —
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 600 }}>
-            O-1005 . Fresh chilled
+            {initialOrders.find((order) => order.status !== 'delivered')?.id ?? 'No active orders'} . {initialOrders.find((order) => order.status !== 'delivered')?.type ?? ''}
           </div>
         </div>
 

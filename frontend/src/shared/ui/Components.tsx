@@ -73,58 +73,46 @@ export function DeliveryRateCard({ rate = '76.6%' }: { rate?: string }) {
 }
 
 // Delivery Vehicles Card with Truck Vector & Availability Meters
-export function DeliveryVehiclesCard() {
+export function DeliveryVehiclesCard({ vehicles = [] }: { vehicles?: { id: string; type: string; temperature: string; status: string }[] }) {
+  const categories = [
+    { label: 'Reefer truck', matches: (vehicle: (typeof vehicles)[number]) => vehicle.type === 'TRUCK' && vehicle.temperature === 'REEFER' },
+    { label: 'Ambient truck', matches: (vehicle: (typeof vehicles)[number]) => vehicle.type === 'TRUCK' && vehicle.temperature === 'AMBIENT' },
+    { label: 'Van', matches: (vehicle: (typeof vehicles)[number]) => vehicle.type === 'VAN' },
+  ];
+  const available = vehicles.filter((vehicle) => vehicle.status === 'AVAILABLE').length;
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Delivery vehicles</span>
-        <span style={{ fontSize: 16, color: 'var(--text-muted)', cursor: 'pointer' }}>...</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Fleet availability</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live API</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-subtle)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--status-good-text)', fontWeight: 700 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} /> On-route
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--status-good-text)', fontWeight: 700 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} /> Available
           </div>
-          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{available}</div>
         </div>
         <img className="delivery-vehicle-image" src={deliveryVehicleImage} alt="Delivery truck" />
       </div>
 
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16A34A' }} /> Available
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        {available} of {vehicles.length} vehicles available
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-            <span>Freezer Truck</span>
-            <span>7 / 12</span>
-          </div>
-          <div className="bar-track">
-            <div className="bar-fill" style={{ width: `${(7 / 12) * 100}%` }} />
-          </div>
-        </div>
-
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-            <span>Dry-Box Truck</span>
-            <span>15 / 40</span>
-          </div>
-          <div className="bar-track">
-            <div className="bar-fill" style={{ width: `${(15 / 40) * 100}%` }} />
-          </div>
-        </div>
-
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-            <span>Van</span>
-            <span>3 / 8</span>
-          </div>
-          <div className="bar-track">
-            <div className="bar-fill" style={{ width: `${(3 / 8) * 100}%` }} />
-          </div>
-        </div>
+        {categories.map((category) => {
+          const members = vehicles.filter(category.matches);
+          const ready = members.filter((vehicle) => vehicle.status === 'AVAILABLE').length;
+          return <div key={category.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+              <span>{category.label}</span>
+              <span>{ready} / {members.length}</span>
+            </div>
+            <div className="bar-track"><div className="bar-fill" style={{ width: `${members.length ? (ready / members.length) * 100 : 0}%` }} /></div>
+          </div>;
+        })}
       </div>
     </div>
   );

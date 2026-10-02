@@ -44,7 +44,7 @@ public class OrderController {
 
     @GetMapping
     public List<OrderResponse> list(@RequestParam(required = false) String outletId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate orderDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate orderDate,
             Authentication authentication) {
         boolean storekeeper = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_STOREKEEPER"));

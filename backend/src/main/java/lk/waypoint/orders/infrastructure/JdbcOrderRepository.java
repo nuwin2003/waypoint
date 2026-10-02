@@ -41,6 +41,13 @@ public class JdbcOrderRepository implements OrderRepository {
     }
 
     @Override
+    public List<Order> findByOutlet(String outletId) {
+        return jdbc.query("SELECT id, order_ref, outlet_id, product_brand, item_description, order_date, placed_at, after_cutoff, "
+                + "temp_requirement, order_units, order_weight_kg, order_volume_m3, status "
+                + "FROM orders WHERE outlet_id = ? ORDER BY order_date DESC, placed_at DESC", this::map, outletId);
+    }
+
+    @Override
     public Optional<String> findActiveOutletForUser(String email) {
         return jdbc.query("SELECT u.outlet_id FROM app_user u JOIN outlet o ON o.id = u.outlet_id "
                         + "WHERE u.email = ? AND u.active = true AND u.role = 'STORE_MANAGER' AND o.active = true",

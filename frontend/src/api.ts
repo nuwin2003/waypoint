@@ -60,15 +60,42 @@ export type CreatedUserResponse = {
 
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code?: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit, authenticated = true): Promise<T> {
   const token = authenticated ? localStorage.getItem('waypoint.token') : null;
-  const response = await fetch(`${apiBase}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers ?? {}) },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase}${path}`, {
+      ...options,
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json',
+        ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new ApiError('Could not reach Waypoint. Check your connection and try again.', 0, 'NETWORK_ERROR');
+  }
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
-    throw new Error(body?.detail || body?.message || `Request failed with ${response.status}`);
+    const raw = await response.text();
+    let body: { detail?: string; message?: string; code?: string } | null = null;
+    try { body = JSON.parse(raw) as typeof body; } catch { /* Non-JSON proxy errors are intentionally not shown verbatim. */ }
+    const statusMessage = response.status === 401
+      ? 'Your session has expired. Please sign in again.'
+      : response.status === 403
+        ? 'You do not have permission to do that.'
+        : response.status >= 500
+          ? 'Waypoint could not complete the request. Please try again.'
+          : `Request failed (${response.status}).`;
+    throw new ApiError(body?.detail || body?.message || statusMessage, response.status, body?.code);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -102,7 +129,7 @@ export const api = {
   }),
   outlets: (depotId?: string) => request<Outlet[]>(`/outlets${queryString({ depotId })}`),
   vehicles: (depotId?: string) => request<Vehicle[]>(`/vehicles/availability${queryString({ depotId })}`),
-  orders: (outletId: string | undefined, orderDate: string) => request<Order[]>(`/orders${queryString({ outletId, orderDate })}`),
+  orders: (outletId?: string, orderDate?: string) => request<Order[]>(`/orders${queryString({ outletId, orderDate })}`),
   createOrder: (payload: {
     productBrand: ProductBrandCode;
     itemDescription: string;

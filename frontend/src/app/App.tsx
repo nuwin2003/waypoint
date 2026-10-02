@@ -55,7 +55,7 @@ function LoginRoute() {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
+        <Routes>
         {/* Public / Login Route */}
         <Route path="/login" element={<LoginRoute />} />
 
@@ -119,7 +119,7 @@ export default function App() {
 
         {/* Fallback */}
         <Route path="*" element={<RootRedirect />} />
-      </Routes>
+        </Routes>
     </AuthProvider>
   );
 }

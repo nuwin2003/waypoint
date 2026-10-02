@@ -5,7 +5,7 @@ export interface DispatchOrder {
   id: string;
   outlet: string;
   brand: DispatchBrand;
-  depot: 'Peliyagoda' | 'Kandy';
+  depot: string;
   temperature: 'ambient' | 'chilled';
   units: number;
   weight: number;
