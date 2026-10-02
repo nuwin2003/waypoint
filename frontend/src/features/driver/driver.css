@@ -73,7 +73,12 @@
   background: var(--status-purple-bg);
   color: var(--status-purple-text);
   font-size: 14px; font-weight: 600;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
 }
+.dv-avatar.active { box-shadow: 0 0 0 2px var(--purple-600); }
 
 /* ---- content + tab bar ---- */
 .dv-content {
@@ -692,6 +697,71 @@
 .dv-sample-badge {
   background: var(--dv-soft); color: var(--text-muted); font-size: 13px; font-weight: 700;
   padding: 8px 12px; border-radius: 8px; margin: 12px auto 18px;
+}
+
+/* ---- profile page ---- */
+.dv-profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 18px 16px;
+  margin-bottom: 12px;
+}
+.dv-profile-name { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+.dv-profile-email { margin-top: 4px; font-size: 13px; color: var(--text-secondary); word-break: break-all; }
+.dv-profile-ring {
+  width: 64px; height: 64px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--purple-600);
+  background: var(--status-purple-bg);
+  color: var(--status-purple-text);
+  font-size: 22px; font-weight: 700;
+}
+.dv-profile-section { margin-top: 18px; }
+.dv-profile-section h2 {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+}
+.dv-profile-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.dv-profile-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 14px;
+  background: transparent;
+  border: none; border-bottom: 1px solid var(--border-light);
+  text-align: left; color: var(--text-primary);
+  font-size: 15px; font-weight: 600;
+}
+.dv-profile-row:last-child { border-bottom: none; }
+button.dv-profile-row { cursor: pointer; }
+.dv-profile-row svg { flex-shrink: 0; color: var(--text-muted); }
+.dv-profile-row-text { display: flex; flex-direction: column; min-width: 0; }
+.dv-profile-row-text small { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+.dv-profile-badge {
+  margin-left: auto; flex-shrink: 0;
+  background: var(--status-warn-bg, #fef3c7); color: var(--status-warn-text);
+  font-size: 12px; font-weight: 700;
+  padding: 3px 8px; border-radius: 8px;
+}
+.dv-profile-badge.accent {
+  background: var(--status-purple-bg); color: var(--status-purple-text);
+}
+.dv-profile-signout {
+  width: 100%; margin-top: 18px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; border-radius: 12px; cursor: pointer;
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  color: var(--dv-danger); font-size: 15px; font-weight: 700;
 }
 
 @media (max-width: 360px) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { House, Route as RouteIcon, Box, History, Moon, Sun } from 'lucide-react';
+import { useAuth } from '../../app/auth/AuthContext';
 import { DriverModalProvider } from './DriverModals';
 import { DRIVER_INITIALS } from './data/driverData';
 import logo from '../../assets/logo-short.png';
@@ -46,8 +47,13 @@ function useDarkTheme(): [boolean, () => void] {
 
 export function DriverWorkspace() {
   const location = useLocation();
+  const { user } = useAuth();
   const [dark, toggleDark] = useDarkTheme();
   const immersive = location.pathname.endsWith('/route/map');
+
+  const initials = user?.displayName
+    ? user.displayName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+    : DRIVER_INITIALS;
 
   return (
     <DriverModalProvider>
@@ -68,7 +74,13 @@ export function DriverWorkspace() {
               >
                 {dark ? <Sun size={20} /> : <Moon size={20} />}
               </button>
-              <span className="dv-avatar">{DRIVER_INITIALS}</span>
+              <NavLink
+                to="/drive/profile"
+                className={({ isActive }) => `dv-avatar${isActive ? ' active' : ''}`}
+                aria-label="Profile"
+              >
+                {initials}
+              </NavLink>
             </div>
           </header>
         )}
