@@ -58,6 +58,18 @@ export type CreatedUserResponse = {
   displayName: string;
 };
 
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: LoginResponse['role'];
+  outletId: string | null;
+  outletName: string | null;
+  depotId: string | null;
+  depotName: string | null;
+  vehicleId: string | null;
+  active: boolean;
+};
+
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -125,13 +137,29 @@ export const api = {
   createUser: (payload: {
     email: string;
     password: string;
-    role: 'STOREKEEPER' | 'DISPATCHER' | 'LOADER' | 'DRIVER';
+    role: LoginResponse['role'];
     outletId?: string;
     depotId?: string;
     vehicleId?: string;
   }) => request<CreatedUserResponse>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
+  }),
+  adminUsers: () => request<AdminUser[]>('/admin/users'),
+  adminCreateUser: (payload: {
+    email: string;
+    password: string;
+    role: LoginResponse['role'];
+    outletId?: string;
+    depotId?: string;
+    vehicleId?: string;
+  }) => request<AdminUser>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  adminSetUserStatus: (id: string, active: boolean) => request<AdminUser>(`/admin/users/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
   }),
   outlets: (depotId?: string) => request<Outlet[]>(`/outlets${queryString({ depotId })}`),
   vehicles: (depotId?: string) => request<Vehicle[]>(`/vehicles/availability${queryString({ depotId })}`),

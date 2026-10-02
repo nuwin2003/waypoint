@@ -1,17 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { api, type Outlet } from '../../../api';
 import { AdminBadge, AdminDrawer, AdminHeader, AdminIcon, AdminPanel, AdminSelect, AdminStat } from '../components/AdminUI';
-import { adminOutlets } from '../data/adminData';
 
-type OutletRow=typeof adminOutlets[number];
-export function MasterDataPage(){
-  const [outlets,setOutlets]=useState<OutletRow[]>(adminOutlets);const [depot,setDepot]=useState('All depots');const [selected,setSelected]=useState<OutletRow|null>(null);const [draft,setDraft]=useState<OutletRow|null>(null);const [saved,setSaved]=useState(false);
-  const rows=useMemo(()=>outlets.filter((o)=>depot==='All depots'||o.depot===depot),[outlets,depot]);
-  const save=()=>{if(!draft)return;setOutlets((current)=>current.map((o)=>o.id===draft.id?draft:o));setSelected(draft);setSaved(true);setTimeout(()=>setSaved(false),2600);};
-  const field=(key:keyof OutletRow,label:string)=><label className="admin-field" key={key}>{label}<input value={draft?.[key]??''} onChange={(e)=>setDraft((current)=>current?{...current,[key]:e.target.value}:current)}/></label>;
-  return <div className="admin-page"><AdminHeader title="Master Data" subtitle="The shared information behind every delivery."/><div className="admin-toolbar"><div className="admin-toolbar-filters"><AdminSelect value={depot} values={['All depots','Peliyagoda','Kandy']} onChange={setDepot}/></div><AdminBadge tone="neutral">Sample workspace</AdminBadge></div>
-    <div className="admin-stats-grid four"><AdminStat label="Outlets in network" value="120" note="80 Fresh · 25 Style · 15 Tech" icon={<AdminIcon name="warehouse"/>}/><AdminStat label="Fleet vehicles" value="60" note="12 reefer trucks · 40 dry · 8 vans" icon={<AdminIcon name="truck"/>}/><AdminStat label="Chilled-capable" value="16" note="12 trucks + 4 refrigerated vans" icon={<AdminIcon name="alert"/>}/><AdminStat label="Operating depots" value="02" note="Peliyagoda & Kandy" icon={<AdminIcon name="pin"/>}/></div>
-    <AdminPanel title="Outlet directory" className="admin-data-panel"><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Outlet</th><th>Depot</th><th>Window</th><th>Vehicle access</th><th>Unloading</th><th/></tr></thead><tbody>{rows.map((o)=><tr key={o.id}><td><strong>{o.name}</strong><small>{o.id} · {o.district}</small></td><td><b>{o.depot}</b></td><td><b>{o.window}</b></td><td><AdminBadge tone={o.access==='Van only'?'amber':'neutral'}>{o.access}</AdminBadge></td><td><b>{o.unloading}</b></td><td><button className="admin-text-link" type="button" onClick={()=>{setSelected(o);setDraft({...o})}}>Edit <AdminIcon name="chevron"/></button></td></tr>)}</tbody></table></div><footer className="admin-table-footer"><span>{rows.length} illustrative records</span><span>Network total: 120 outlets</span></footer></AdminPanel>
-    {selected&&draft&&<AdminDrawer title={selected.name} subtitle="Shared outlet information" onClose={()=>{setSelected(null);setDraft(null)}}><div className="admin-form">{field('name','Outlet name')}{field('brand','Brand')}{field('depot','Depot')}{field('district','District')}{field('window','Delivery window')}{field('access','Vehicle access')}{field('unloading','Unloading')}<p className="admin-drawer-note">Delivery windows use Sri Lanka time. Changes affect future planning and are recorded in the audit trail.</p><button className="admin-button primary full" type="button" onClick={save}>Save outlet details</button></div></AdminDrawer>}
-    {saved&&<div className="admin-toast" role="status">Outlet details saved<button onClick={()=>setSaved(false)} type="button">×</button></div>}
+export function MasterDataPage() {
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [vehicles, setVehicles] = useState<Awaited<ReturnType<typeof api.vehicles>>>([]);
+  const [depot, setDepot] = useState('All depots');
+  const [selected, setSelected] = useState<Outlet | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    Promise.all([api.outlets(), api.vehicles()])
+      .then(([loadedOutlets, loadedVehicles]) => {
+        setOutlets(loadedOutlets);
+        setVehicles(loadedVehicles);
+      })
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not load master data.'));
+  }, []);
+
+  const rows = useMemo(() => outlets.filter((outlet) => depot === 'All depots' || outlet.depotId === depot), [outlets, depot]);
+  const depotIds = Array.from(new Set(outlets.map((outlet) => outlet.depotId)));
+  const chilledVehicles = vehicles.filter((vehicle) => vehicle.temperature === 'REEFER').length;
+
+  return <div className="admin-page">
+    <AdminHeader title="Master Data" subtitle="The shared information behind every delivery." />
+    <div className="admin-toolbar"><div className="admin-toolbar-filters"><AdminSelect value={depot} values={['All depots', ...depotIds]} onChange={setDepot} /></div><AdminBadge tone="neutral">Live data</AdminBadge></div>
+    {error && <div className="admin-toast" role="alert">{error}<button onClick={() => setError('')} type="button">×</button></div>}
+    <div className="admin-stats-grid four"><AdminStat label="Outlets in network" value={String(outlets.length)} note="Active outlets returned by the API" icon={<AdminIcon name="warehouse" />} /><AdminStat label="Fleet vehicles" value={String(vehicles.length)} note="Vehicles in the master data store" icon={<AdminIcon name="truck" />} /><AdminStat label="Chilled-capable" value={String(chilledVehicles)} note="Vehicles with reefer temperature class" icon={<AdminIcon name="alert" />} /><AdminStat label="Operating depots" value={String(depotIds.length).padStart(2, '0')} note="Depots represented by active outlets" icon={<AdminIcon name="pin" />} /></div>
+    <AdminPanel title="Outlet directory" className="admin-data-panel"><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Outlet</th><th>Depot</th><th>Brand</th><th>Vehicle access</th><th>Unloading</th><th /></tr></thead><tbody>{rows.map((outlet) => <tr key={outlet.id}><td><strong>{outlet.name}</strong><small>{outlet.id} · {outlet.districtId}</small></td><td><b>{outlet.depotId}</b></td><td>{outlet.brand}</td><td><AdminBadge tone={outlet.parkingConstraint === 'VAN_ONLY' ? 'amber' : 'neutral'}>{outlet.parkingConstraint}</AdminBadge></td><td><b>{outlet.dockType}</b></td><td><button className="admin-text-link" type="button" onClick={() => setSelected(outlet)}>View <AdminIcon name="chevron" /></button></td></tr>)}</tbody></table></div><footer className="admin-table-footer"><span>{rows.length} records</span><span>Read-only operational master data</span></footer></AdminPanel>
+    {selected && <AdminDrawer title={selected.name} subtitle="Outlet information from the API" onClose={() => setSelected(null)}><dl className="admin-detail-grid"><div><dt>Outlet ID</dt><dd>{selected.id}</dd></div><div><dt>Brand</dt><dd>{selected.brand}</dd></div><div><dt>Depot</dt><dd>{selected.depotId}</dd></div><div><dt>District</dt><dd>{selected.districtId}</dd></div><div><dt>Vehicle access</dt><dd>{selected.parkingConstraint}</dd></div><div><dt>Unloading</dt><dd>{selected.dockType}</dd></div></dl><p className="admin-drawer-note">Outlet editing is not enabled because the current API exposes this master data as read-only.</p></AdminDrawer>}
   </div>;
 }
