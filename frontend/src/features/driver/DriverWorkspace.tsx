@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { House, Route as RouteIcon, Box, History, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../app/auth/AuthContext';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { DriverModalProvider } from './DriverModals';
 import { DRIVER_INITIALS } from './data/driverData';
 import logo from '../../assets/logo-short.png';
@@ -55,7 +56,8 @@ export function DriverWorkspace() {
     ? user.displayName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
     : DRIVER_INITIALS;
 
-  return (
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
+  const shell = (
     <DriverModalProvider>
       <div className={`dv-app${immersive ? ' dv-app-immersive' : ''}`}>
         {!immersive && (
@@ -106,5 +108,12 @@ export function DriverWorkspace() {
         )}
       </div>
     </DriverModalProvider>
+  );
+
+  if (!mapsKey) return shell;
+  return (
+    <APIProvider apiKey={mapsKey} region="LK">
+      {shell}
+    </APIProvider>
   );
 }
