@@ -17,6 +17,12 @@ import {
   PackageCheck,
   Calendar,
   Fuel,
+  FileClock,
+  TrendingUp,
+  Wallet,
+  UsersRound,
+  Database,
+  SlidersHorizontal,
   Settings,
   HelpCircle,
   LogOut,
@@ -26,9 +32,20 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   path: string;
+  badge?: string;
 }
 
 export const navItems: Record<UserRole, NavItem[]> = {
+  ADMIN: [
+    { icon: LayoutDashboard, label: 'Home', path: '/admin' },
+    { icon: FileClock, label: 'Audit Trail', path: '/admin/audit' },
+    { icon: TrendingUp, label: 'Forecast', path: '/admin/forecast' },
+    { icon: Wallet, label: 'Fine Ledger', path: '/admin/fines' },
+    { icon: Fuel, label: 'Fuel Integrity', path: '/admin/fuel', badge: '3' },
+    { icon: UsersRound, label: 'Users', path: '/admin/users' },
+    { icon: Database, label: 'Master Data', path: '/admin/master-data' },
+    { icon: SlidersHorizontal, label: 'Configuration', path: '/admin/configuration' },
+  ],
   DISPATCHER: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dispatch' },
     { icon: ListOrdered, label: 'Order Queue', path: '/dispatch/orders' },
@@ -60,6 +77,7 @@ export const navItems: Record<UserRole, NavItem[]> = {
 };
 
 export const workspaceLabels: Record<UserRole, string> = {
+  ADMIN: 'Admin operations',
   DISPATCHER: 'Dispatcher operations',
   LOADER: 'Loader operations',
   STOREKEEPER: 'Store Manager operations',
@@ -118,6 +136,7 @@ export function Sidebar({
                   <IconComponent className="w-5 h-5" />
                 </span>
                 <span className="nav-label">{item.label}</span>
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
               </NavLink>
             );
           })}
@@ -140,13 +159,13 @@ export function Sidebar({
             to="/help"
             className="nav-link"
             onClick={onClose}
-            aria-label="Help"
-            title={sidebarCollapsed ? 'Help' : undefined}
+            aria-label={role === 'ADMIN' ? 'Help & Support' : 'Help'}
+            title={sidebarCollapsed ? (role === 'ADMIN' ? 'Help & Support' : 'Help') : undefined}
           >
             <span className="nav-icon">
               <HelpCircle className="w-5 h-5" />
             </span>
-            <span className="nav-label">Help</span>
+            <span className="nav-label">{role === 'ADMIN' ? 'Help & Support' : 'Help'}</span>
           </NavLink>
           <button
             className="nav-link logout-link"
