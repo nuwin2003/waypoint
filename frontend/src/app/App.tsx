@@ -26,6 +26,11 @@ import { TrackOrdersPage } from '../features/store/pages/TrackOrdersPage';
 import { ReceiveConfirmPage } from '../features/store/pages/ReceiveConfirmPage';
 import { OrderHistoryPage } from '../features/store/pages/OrderHistoryPage';
 import { DriverWorkspace } from '../features/driver/DriverWorkspace';
+import { DriverHomePage } from '../features/driver/pages/DriverHomePage';
+import { RoutePage } from '../features/driver/pages/RoutePage';
+import { NavigationPage } from '../features/driver/pages/NavigationPage';
+import { DeliveryPage } from '../features/driver/pages/DeliveryPage';
+import { DriverHistoryPage } from '../features/driver/pages/DriverHistoryPage';
 import { AdminWorkspace } from '../features/admin/AdminWorkspace';
 import { AdminOverviewPage } from '../features/admin/pages/AdminOverviewPage';
 import { AuditTrailPage } from '../features/admin/pages/AuditTrailPage';
@@ -111,10 +116,22 @@ export default function App() {
             <Route path="receive" element={<ReceiveConfirmPage />} />
             <Route path="history" element={<OrderHistoryPage />} />
           </Route>
+        </Route>
 
-          {/* Driver */}
-          <Route path="/drive" element={<RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>} />
-          <Route path="/drive/*" element={<RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>} />
+        {/* Driver: phone-first workspace with its own shell (header + bottom tabs) */}
+        <Route
+          path="/drive"
+          element={
+            <RequireAuth>
+              <RoleRoute role="DRIVER"><DriverWorkspace /></RoleRoute>
+            </RequireAuth>
+          }
+        >
+          <Route index element={<DriverHomePage />} />
+          <Route path="route" element={<RoutePage />} />
+          <Route path="route/map" element={<NavigationPage />} />
+          <Route path="delivery" element={<DeliveryPage />} />
+          <Route path="history" element={<DriverHistoryPage />} />
         </Route>
 
         {/* Fallback */}
