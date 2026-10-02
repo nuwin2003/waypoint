@@ -70,6 +70,19 @@ export type AdminUser = {
   active: boolean;
 };
 
+export type AdminOverview = {
+  date: string;
+  confirmedOrders: number;
+  plannedStops: number;
+  completedStops: number;
+  atRiskDeliveries: number;
+  deferredOrders: number;
+  progress: Array<{ label: string; count: number }>;
+  trend: Array<{ date: string; onTimePercent: number }>;
+  depotPerformance: Array<{ label: string; completed: number; planned: number }>;
+  brandPerformance: Array<{ label: string; completed: number; planned: number }>;
+};
+
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -161,6 +174,12 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify({ active }),
   }),
+  adminOverview: (params?: { date?: string; depotId?: string; brand?: string; periodDays?: number }) => request<AdminOverview>(`/admin/overview${queryString({
+    date: params?.date,
+    depotId: params?.depotId,
+    brand: params?.brand,
+    periodDays: params?.periodDays?.toString(),
+  })}`),
   outlets: (depotId?: string) => request<Outlet[]>(`/outlets${queryString({ depotId })}`),
   vehicles: (depotId?: string) => request<Vehicle[]>(`/vehicles/availability${queryString({ depotId })}`),
   orders: (outletId?: string, orderDate?: string) => request<Order[]>(`/orders${queryString({ outletId, orderDate })}`),

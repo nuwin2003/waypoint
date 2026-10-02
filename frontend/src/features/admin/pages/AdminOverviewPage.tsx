@@ -1,37 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { api, type AdminOverview } from '../../../api';
 import { AdminBadge, AdminHeader, AdminIcon, AdminPanel, AdminSelect, AdminStat } from '../components/AdminUI';
 
-const issues = [
-  { issue: 'Delivery sync conflict', reference: 'RT-1042 · Stop 4', depot: 'Kandy', category: 'Data integrity', tone: 'red', status: 'High', time: '07:35 AM' },
-  { issue: 'Outlet deferred again', reference: 'Fresh · Katugastota', depot: 'Kandy', category: 'Service fairness', tone: 'amber', status: 'At risk', time: '07:38 AM' },
-  { issue: 'Unexplained distance', reference: 'WP-024 · +22 km', depot: 'Kandy', category: 'Fuel integrity', tone: 'amber', status: 'New', time: '07:30 AM' },
-  { issue: 'Reimbursement awaiting payment', reference: 'FN-0082 · LKR 2,500', depot: 'Kandy', category: 'Fine report', tone: 'blue', status: 'Approved', time: '07:31 AM' },
-];
+const periodOptions = [{ label: 'Last 7 days', days: 7 }, { label: 'Last 30 days', days: 30 }, { label: 'This year', days: 365 }];
+const isoDate = (date: Date) => date.toISOString().slice(0, 10);
+const displayDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const label = (value: string) => value === 'FRESH' ? 'Fresh' : value === 'STYLE' ? 'Style' : value === 'TECH' ? 'Tech' : value;
+const emptyOverview = (date: string): AdminOverview => ({
+  date,
+  confirmedOrders: 0,
+  plannedStops: 0,
+  completedStops: 0,
+  atRiskDeliveries: 0,
+  deferredOrders: 0,
+  progress: [],
+  trend: [],
+  depotPerformance: [],
+  brandPerformance: [],
+});
 
 export function AdminOverviewPage() {
+  const today = isoDate(new Date());
+  const [date, setDate] = useState(today);
   const [depot, setDepot] = useState('All depots');
   const [brand, setBrand] = useState('All brands');
-  const [period, setPeriod] = useState('Last 7 days');
+  const [period, setPeriod] = useState(periodOptions[0].label);
+  const [overview, setOverview] = useState<AdminOverview>(() => emptyOverview(today));
+  const [error, setError] = useState('');
+  const periodDays = periodOptions.find((option) => option.label === period)?.days ?? 7;
+
+  useEffect(() => {
+    setOverview(emptyOverview(date));
+    setError('');
+    api.adminOverview({ date, depotId: depot === 'All depots' ? undefined : depot, brand: brand === 'All brands' ? undefined : brand.toUpperCase(), periodDays })
+      .then(setOverview)
+      .catch((reason: unknown) => {
+        setOverview(emptyOverview(date));
+        setError(reason instanceof Error ? reason.message : 'Could not load the overview.');
+      });
+  }, [date, depot, brand, periodDays]);
+
+  const completionRate = overview.plannedStops > 0 ? Math.round(overview.completedStops * 100 / overview.plannedStops) : 0;
+  const trendPath = useMemo(() => {
+    if (!overview.trend.length) return '';
+    const max = Math.max(100, ...overview.trend.map((point) => point.onTimePercent));
+    return overview.trend.map((point, index) => {
+      const x = overview.trend.length === 1 ? 310 : index * 620 / (overview.trend.length - 1);
+      const y = 190 - (point.onTimePercent / max) * 170;
+      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+  }, [overview]);
+
   return <div className="admin-page admin-overview-page">
-    <AdminHeader title="Admin overview" subtitle="A clear view of your delivery network." action={<><AdminBadge tone="green">✓ &nbsp; Operating day</AdminBadge><AdminSelect value="29 Sep 2026" values={['29 Sep 2026', '28 Sep 2026', '27 Sep 2026']} onChange={() => undefined}/></>}/>
-    <div className="admin-toolbar"><div className="admin-toolbar-filters"><AdminSelect value={depot} values={['All depots', 'Peliyagoda', 'Kandy']} onChange={setDepot}/><AdminSelect value={brand} values={['All brands', 'Fresh', 'Style', 'Tech']} onChange={setBrand}/></div><span>Snapshot at 07:42 AM <b>·</b> Sample data</span></div>
-    <div className="admin-stats-grid four"><AdminStat label="Confirmed orders" value="128" note="↗ 8.5%　vs. last operating day" icon={<AdminIcon name="box"/>} tone="purple"/><AdminStat label="Completed deliveries" value="72/96" note="75% complete　of planned stops" icon={<AdminIcon name="truck"/>} tone="purple"/><AdminStat label="At-risk deliveries" value="04" note="Delivery window at risk" icon={<AdminIcon name="clock"/>} tone="amber"/><AdminStat label="Deferred orders" value="08" note="2 outlets skipped again" icon={<AdminIcon name="down"/>} tone="red"/></div>
-    <div className="admin-overview-charts">
-      <AdminPanel title="On-time delivery performance" icon={<AdminIcon name="trend"/>} action={<AdminSelect value={period} values={['Last 7 days', 'Last 30 days', 'This year']} onChange={setPeriod}/>} className="admin-performance-panel">
-        <div className="admin-chart-result"><strong>96.0<small>%</small></strong><AdminBadge tone="green">↗ 4.0 pts</AdminBadge><span>vs. previous period</span></div>
-        <div className="admin-line-chart"><div className="admin-chart-ylabels"><span>100%</span><span>80%</span><span>60%</span></div><svg viewBox="0 0 620 210" preserveAspectRatio="none" role="img" aria-label="On-time delivery performance trend"><defs><linearGradient id="admin-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#6e38f1" stopOpacity=".13"/><stop offset="100%" stopColor="#6e38f1" stopOpacity="0"/></linearGradient></defs><path className="admin-chart-gridline" d="M0 20H620M0 100H620M0 180H620"/><path className="admin-chart-area" d="M0 80 C55 60 80 45 130 52 S210 78 260 55 S340 24 390 39 S475 66 520 49 S580 32 620 19 V190 H0Z"/><path className="admin-chart-line" d="M0 80 C55 60 80 45 130 52 S210 78 260 55 S340 24 390 39 S475 66 520 49 S580 32 620 19"/></svg><div className="admin-chart-xlabels"><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Mo</span><span>Tu</span></div></div>
-        <p className="admin-chart-note">Completed deliveries arriving within the outlet’s delivery window.</p>
-      </AdminPanel>
-      <AdminPanel title="Delivery progress" action={<AdminSelect value={period} values={['Last 7 days', 'Last 30 days', 'This year']} onChange={setPeriod}/>} className="admin-progress-panel">
-        <div className="admin-donut-wrap"><div className="admin-donut"><div><strong>75%</strong><span>of stops completed</span></div></div></div>
-        <div className="admin-legend-grid"><span><i className="purple"/>Delivered <b>72</b></span><span><i className="lilac"/>In transit <b>18</b></span><span><i className="amber"/>Loading <b>4</b></span><span><i className="pale"/>Pending <b>2</b></span></div>
-      </AdminPanel>
-    </div>
-    <div className="admin-overview-lower">
-      <AdminPanel title="Depot performance" icon={<AdminIcon name="warehouse"/>} className="admin-depot-panel"><div className="admin-chart-legend"><span><i className="purple"/>Completed</span><span><i className="pale"/>Planned</span></div><div className="admin-bar-chart"><div className="admin-bars-group"><i style={{height:'54%'}}/><i className="planned" style={{height:'70%'}}/><span>Peliyagoda</span></div><div className="admin-bars-group"><i style={{height:'28%'}}/><i className="planned" style={{height:'38%'}}/><span>Kandy</span></div></div></AdminPanel>
-      <AdminPanel title="Service by brand" icon={<AdminIcon name="box"/>} className="admin-brand-panel"><div className="admin-brand-progress"><div><i className="brand-icon fresh"><AdminIcon name="leaf"/></i><strong>Fresh</strong><b>83%</b></div><div className="admin-progress-track"><i style={{width:'83%'}}/></div><small>50 of 60 stops completed · Before 8 AM</small></div><div className="admin-brand-progress"><div><i className="brand-icon style"><AdminIcon name="shirt"/></i><strong>Style</strong><b>64%</b></div><div className="admin-progress-track"><i style={{width:'64%'}}/></div><small>14 of 22 stops completed</small></div><div className="admin-brand-progress"><div><i className="brand-icon tech"><AdminIcon name="monitor"/></i><strong>Tech</strong><b>57%</b></div><div className="admin-progress-track"><i style={{width:'57%'}}/></div><small>8 of 14 stops completed</small></div></AdminPanel>
-      <AdminPanel title="Integrity overview" icon={<AdminIcon name="shield"/>} action={<AdminBadge tone="amber">Needs review</AdminBadge>} className="admin-integrity-panel"><div className="admin-integrity-row"><i className="brand-icon amber"><AdminIcon name="fuel"/></i><div><strong>Fuel flags</strong><small>Distance & refuel checks</small></div><b>3 <AdminIcon name="chevron"/></b></div><div className="admin-integrity-row"><i className="brand-icon purple"><AdminIcon name="file"/></i><div><strong>Fine reports</strong><small>1 awaiting reimbursement</small></div><b>3 <AdminIcon name="chevron"/></b></div><div className="admin-integrity-row"><i className="brand-icon amber"><AdminIcon name="sync"/></i><div><strong>Sync health</strong><small>6 pending events · 1 conflict</small></div><b><AdminIcon name="chevron"/></b></div><p className="admin-panel-footnote">Across both depots · selected snapshot</p></AdminPanel>
-    </div>
-    <AdminPanel title="Needs attention" action={<AdminBadge tone="amber">4</AdminBadge>} className="admin-attention-panel"><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Issue</th><th>Depot</th><th>Category</th><th>Priority / status</th><th>Reported</th><th/></tr></thead><tbody>{issues.map((item) => <tr key={item.issue}><td><strong>{item.issue}</strong><small>{item.reference}</small></td><td>{item.depot}</td><td>{item.category}</td><td><AdminBadge tone={item.tone}>{item.status}</AdminBadge></td><td>{item.time}</td><td><button className="admin-text-link" type="button">Review <span>↗</span></button></td></tr>)}</tbody></table></div></AdminPanel>
+    <AdminHeader title="Admin overview" subtitle="A clear view of your delivery network." action={<><AdminBadge tone="green">✓ &nbsp; Live operational data</AdminBadge><AdminSelect value={displayDate(date)} values={[displayDate(date)]} onChange={() => undefined} /></>} />
+    <div className="admin-toolbar"><div className="admin-toolbar-filters"><AdminSelect value={depot} values={['All depots', 'PELIYAGODA', 'KANDY']} onChange={setDepot} /><AdminSelect value={brand} values={['All brands', 'Fresh', 'Style', 'Tech']} onChange={setBrand} /><label className="admin-date-filter">Snapshot date<input type="date" value={date} max={today} onChange={(event) => setDate(event.target.value)} /></label></div><span>Snapshot for {displayDate(date)} <b>·</b> API-backed</span></div>
+    {error && <div className="admin-toast" role="alert">{error}<button onClick={() => setError('')} type="button">×</button></div>}
+      <div className="admin-stats-grid four"><AdminStat label="Confirmed orders" value={String(overview.confirmedOrders)} note="Orders with a dispatch status" icon={<AdminIcon name="box" />} tone="purple" /><AdminStat label="Completed deliveries" value={`${overview.completedStops}/${overview.plannedStops}`} note={`${completionRate}% complete of planned stops`} icon={<AdminIcon name="truck" />} tone="purple" /><AdminStat label="At-risk deliveries" value={String(overview.atRiskDeliveries)} note="Planned arrivals past due" icon={<AdminIcon name="clock" />} tone="amber" /><AdminStat label="Deferred orders" value={String(overview.deferredOrders)} note="Deferred, failed, or disputed orders" icon={<AdminIcon name="down" />} tone="red" /></div>
+      <div className="admin-overview-charts">
+        <AdminPanel title="On-time delivery performance" icon={<AdminIcon name="trend" />} action={<AdminSelect value={period} values={periodOptions.map((option) => option.label)} onChange={setPeriod} />} className="admin-performance-panel">
+          <div className="admin-chart-result"><strong>{overview.trend.length ? `${Math.round(overview.trend.reduce((total, point) => total + point.onTimePercent, 0) / overview.trend.length)}.0` : '0.0'}<small>%</small></strong><AdminBadge tone="neutral">{overview.trend.length} data points</AdminBadge><span>from completed orders</span></div>
+          <div className="admin-line-chart"><div className="admin-chart-ylabels"><span>100%</span><span>50%</span><span>0%</span></div><svg viewBox="0 0 620 210" preserveAspectRatio="none" role="img" aria-label="On-time delivery performance trend"><path className="admin-chart-gridline" d="M0 20H620M0 105H620M0 190H620" />{trendPath && <path className="admin-chart-line" d={trendPath} />}</svg><div className="admin-chart-xlabels">{overview.trend.slice(-7).map((point) => <span key={point.date}>{point.date.slice(5)}</span>)}</div></div>
+          <p className="admin-chart-note">Percentage of orders marked delivered or received on each operating date.</p>
+        </AdminPanel>
+        <AdminPanel title="Delivery progress" action={<AdminSelect value={period} values={periodOptions.map((option) => option.label)} onChange={setPeriod} />} className="admin-progress-panel">
+          <div className="admin-donut-wrap"><div className="admin-donut" style={{ '--progress': `${completionRate}%` } as React.CSSProperties}><div><strong>{completionRate}%</strong><span>of stops completed</span></div></div></div>
+          <div className="admin-legend-grid">{['Delivered', 'In transit', 'Loading', 'Pending'].map((name) => <span key={name}><i className={name === 'Delivered' ? 'purple' : name === 'In transit' ? 'lilac' : name === 'Loading' ? 'amber' : 'pale'} />{name} <b>{overview.progress.find((item) => item.label === name)?.count ?? 0}</b></span>)}</div>
+        </AdminPanel>
+      </div>
+      <div className="admin-overview-lower">
+        <AdminPanel title="Depot performance" icon={<AdminIcon name="warehouse" />} className="admin-depot-panel"><div className="admin-chart-legend"><span><i className="purple" />Completed</span><span><i className="pale" />Planned</span></div><div className="admin-bar-chart">{overview.depotPerformance.map((item) => <div className="admin-bars-group" key={item.label}><i style={{ height: `${item.planned ? item.completed / item.planned * 100 : 0}%` }} /><i className="planned" style={{ height: `${item.planned ? 100 : 0}%` }} /><span>{item.label}</span></div>)}</div>{overview.depotPerformance.length === 0 && <p className="admin-chart-note">No depot records for this snapshot.</p>}</AdminPanel>
+        <AdminPanel title="Service by brand" icon={<AdminIcon name="box" />} className="admin-brand-panel">{overview.brandPerformance.map((item) => { const rate = item.planned ? Math.round(item.completed / item.planned * 100) : 0; return <div className="admin-brand-progress" key={item.label}><div><strong>{label(item.label)}</strong><b>{rate}%</b></div><div className="admin-progress-track"><i style={{ width: `${rate}%` }} /></div><small>{item.completed} of {item.planned} orders completed</small></div>; })}{overview.brandPerformance.length === 0 && <p className="admin-chart-note">No brand records for this snapshot.</p>}</AdminPanel>
+        <AdminPanel title="Operational attention" icon={<AdminIcon name="shield" />} action={<AdminBadge tone={overview.atRiskDeliveries + overview.deferredOrders ? 'amber' : 'green'}>{overview.atRiskDeliveries + overview.deferredOrders ? 'Needs review' : 'Clear'}</AdminBadge>} className="admin-integrity-panel"><div className="admin-integrity-row"><div><strong>At-risk deliveries</strong><small>Planned arrivals past due</small></div><b>{overview.atRiskDeliveries}</b></div><div className="admin-integrity-row"><div><strong>Deferred orders</strong><small>Orders requiring follow-up</small></div><b>{overview.deferredOrders}</b></div><p className="admin-panel-footnote">Derived from current dispatch and order records.</p></AdminPanel>
+      </div>
+      <AdminPanel title="Needs attention" action={<AdminBadge tone={overview.atRiskDeliveries + overview.deferredOrders ? 'amber' : 'green'}>{overview.atRiskDeliveries + overview.deferredOrders}</AdminBadge>} className="admin-attention-panel"><div className="admin-empty-state">{overview.atRiskDeliveries + overview.deferredOrders ? 'Review the at-risk and deferred records in the dispatch workspace.' : 'No operational attention items for this snapshot.'}</div></AdminPanel>
   </div>;
 }
