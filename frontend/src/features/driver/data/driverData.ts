@@ -16,7 +16,12 @@ export interface DriverStop {
   distanceKm: number;
   /** Sample driving time from the previous point, in minutes. */
   driveMin: number;
+  lat: number;
+  lng: number;
 }
+
+/** Peliyagoda depot, used as the route origin. */
+export const DEPOT_POINT = { lat: 6.9682715, lng: 79.888416 };
 
 export const ROUTE_ID = 'LP-6387';
 export const TRIP_ID = 'WD-R14';
@@ -38,6 +43,8 @@ export const STOPS: DriverStop[] = [
     access: 'Rear loading bay · enter from Station Road',
     distanceKm: 2.0,
     driveMin: 5,
+    lat: 6.9856,
+    lng: 79.8832,
   },
   {
     position: 2,
@@ -49,6 +56,8 @@ export const STOPS: DriverStop[] = [
     access: 'Curbside unloading · contact receiver on arrival',
     distanceKm: 3.1,
     driveMin: 8,
+    lat: 6.9738,
+    lng: 79.8765,
   },
   {
     position: 3,
@@ -60,6 +69,10 @@ export const STOPS: DriverStop[] = [
     access: 'Side gate · ask security for the goods-in desk',
     distanceKm: 1.8,
     driveMin: 6,
+    // On Port Access Road, inland of the ferry terminal. The harbour basin itself
+    // routes across the sea to Mumbai.
+    lat: 6.9508,
+    lng: 79.8602,
   },
   {
     position: 4,
@@ -71,6 +84,8 @@ export const STOPS: DriverStop[] = [
     access: 'Short-stay bay on Main Street · max 15 minutes',
     distanceKm: 1.5,
     driveMin: 7,
+    lat: 6.9394,
+    lng: 79.8542,
   },
 ];
 
@@ -153,6 +168,21 @@ export function formatDayMonth(date: Date): string {
 
 export function formatShortDate(date: Date): string {
   return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.max(1, Math.round(meters / 10) * 10)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 export function daysAgoDate(now: Date, daysAgo: number): Date {

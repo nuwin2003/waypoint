@@ -208,7 +208,6 @@ export function DriverHistoryPage() {
         <div>
           <strong>Your records are up to date</strong>
           <p>Demo records stay on this device.</p>
-          <button type="button" className="dv-text-button">View sync queue →</button>
         </div>
       </section>
 
