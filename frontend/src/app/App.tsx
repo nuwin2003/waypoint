@@ -15,6 +15,10 @@ import { LiveMonitoringPage } from '../features/dispatcher/pages/LiveMonitoringP
 import { EmergencyPage } from '../features/dispatcher/pages/EmergencyPage';
 import { DispatcherHistoryPage } from '../features/dispatcher/pages/DispatcherHistoryPage';
 import { LoaderWorkspace } from '../features/loader/LoaderWorkspace';
+import { LoaderDashboardPage } from '../features/loader/pages/LoaderDashboardPage';
+import { ScanPackagesPage } from '../features/loader/pages/ScanPackagesPage';
+import { DefectItemsPage } from '../features/loader/pages/DefectItemsPage';
+import { MissingItemsPage } from '../features/loader/pages/MissingItemsPage';
 import { StoreWorkspace } from '../features/store/StoreWorkspace';
 import { StoreDashboardPage } from '../features/store/pages/StoreDashboardPage';
 import { PlaceOrderPage } from '../features/store/pages/PlaceOrderPage';
@@ -71,8 +75,12 @@ export default function App() {
           </Route>
 
           {/* Loader */}
-          <Route path="/load" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
-          <Route path="/load/*" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>} />
+          <Route path="/load" element={<RoleRoute role="LOADER"><LoaderWorkspace /></RoleRoute>}>
+            <Route index element={<LoaderDashboardPage />} />
+            <Route path="scan-packages" element={<ScanPackagesPage />} />
+            <Route path="defect-items" element={<DefectItemsPage />} />
+            <Route path="missing-items" element={<MissingItemsPage />} />
+          </Route>
 
           {/* Store Manager */}
           <Route path="/store" element={<RoleRoute role="STOREKEEPER"><StoreWorkspace /></RoleRoute>}>
