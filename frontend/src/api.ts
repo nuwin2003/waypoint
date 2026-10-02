@@ -67,6 +67,12 @@ export class ApiError extends Error {
   }
 }
 
+type ApiErrorBody = {
+  detail?: string;
+  message?: string;
+  code?: string;
+};
+
 async function request<T>(path: string, options?: RequestInit, authenticated = true): Promise<T> {
   const token = authenticated ? localStorage.getItem('waypoint.token') : null;
   let response: Response;
@@ -86,8 +92,8 @@ async function request<T>(path: string, options?: RequestInit, authenticated = t
   }
   if (!response.ok) {
     const raw = await response.text();
-    let body: { detail?: string; message?: string; code?: string } | null = null;
-    try { body = JSON.parse(raw) as typeof body; } catch { /* Non-JSON proxy errors are intentionally not shown verbatim. */ }
+    let body: ApiErrorBody | null = null;
+    try { body = JSON.parse(raw) as ApiErrorBody; } catch { /* Non-JSON proxy errors are intentionally not shown verbatim. */ }
     const statusMessage = response.status === 401
       ? 'Your session has expired. Please sign in again.'
       : response.status === 403
