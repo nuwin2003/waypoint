@@ -48,5 +48,5 @@ export function StoreIcon({ name }: { name: 'edit' | 'pause' | 'play' | 'trash' 
     box: <><path d="m12 3 9 5-9 5-9-5 9-5ZM3 8v9l9 4 9-4V8m-9 5v8"/></>,
     check: <path d="m5 12 4 4L19 6"/>,
   };
-  return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
