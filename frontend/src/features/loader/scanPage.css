@@ -291,12 +291,22 @@
   box-shadow: inset 0 2px 14px rgba(124, 58, 237, 0.04);
 }
 
+.scanner-video-feed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
 .viewfinder-overlay {
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at center, transparent 40%, rgba(124, 58, 237, 0.03) 100%);
   pointer-events: none;
   transition: background 0.3s ease;
+  z-index: 2;
 }
 
 .viewfinder-overlay.torch-active {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Camera,
   Flashlight,
@@ -12,6 +12,7 @@ import {
   QrCode,
   Scan,
 } from 'lucide-react';
+import QrScanner from 'qr-scanner';
 
 export interface PackageData {
   id: string;
@@ -51,10 +52,80 @@ export function PackageScannerCard({
   const [cameraMode, setCameraMode] = useState<'rear' | 'front'>('rear');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scanFlash, setScanFlash] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
 
-  const toggleTorch = () => setTorchOn((prev) => !prev);
-  const toggleCamera = () =>
-    setCameraMode((prev) => (prev === 'rear' ? 'front' : 'rear'));
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
+
+  // Initialize and attach live QR scanner to video element
+  useEffect(() => {
+    if (!videoRef.current || !autoCapture) {
+      if (scannerRef.current) {
+        scannerRef.current.stop();
+        setCameraActive(false);
+      }
+      return;
+    }
+
+    const qrScanner = new QrScanner(
+      videoRef.current,
+      (result) => {
+        if (isAllCompleted) return;
+        setScanFlash(true);
+        setTimeout(() => {
+          setScanFlash(false);
+          onScanSuccess({
+            ...currentPackage,
+            id: result.data || currentPackage.id,
+          });
+        }, 350);
+      },
+      {
+        preferredCamera: cameraMode === 'rear' ? 'environment' : 'user',
+        highlightScanRegion: false,
+        highlightCodeOutline: false,
+      }
+    );
+
+    scannerRef.current = qrScanner;
+
+    qrScanner
+      .start()
+      .then(() => {
+        setCameraActive(true);
+      })
+      .catch((err) => {
+        console.warn('Live camera stream not started:', err);
+        setCameraActive(false);
+      });
+
+    return () => {
+      qrScanner.destroy();
+      scannerRef.current = null;
+    };
+  }, [autoCapture, isAllCompleted, currentPackage, cameraMode, onScanSuccess]);
+
+  const toggleTorch = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.toggleFlash();
+        const isFlash = await scannerRef.current.isFlashOn();
+        setTorchOn(isFlash);
+      } catch {
+        setTorchOn((prev) => !prev);
+      }
+    } else {
+      setTorchOn((prev) => !prev);
+    }
+  };
+
+  const toggleCamera = () => {
+    const nextMode = cameraMode === 'rear' ? 'front' : 'rear';
+    setCameraMode(nextMode);
+    if (scannerRef.current) {
+      scannerRef.current.setCamera(nextMode === 'rear' ? 'environment' : 'user');
+    }
+  };
 
   const handleTriggerScan = () => {
     if (isAllCompleted) return;
@@ -71,7 +142,11 @@ export function PackageScannerCard({
       <div className="scanner-header">
         <div className="scanner-header-text">
           <h2>Scan current package</h2>
-          <p>Center the QR label inside the frame. Capture is automatic.</p>
+          <p>
+            {cameraActive
+              ? 'Point camera at QR label. Capture is automatic.'
+              : 'Center the QR label inside the frame or tap to scan.'}
+          </p>
         </div>
         <button
           type="button"
@@ -86,6 +161,14 @@ export function PackageScannerCard({
 
       {/* Scanner Viewfinder */}
       <div className={`scanner-viewfinder ${isFullscreen ? 'fullscreen' : ''}`}>
+        {/* Live video feed from qr-scanner */}
+        <video
+          ref={videoRef}
+          className="scanner-video-feed"
+          playsInline
+          muted
+        />
+
         <div className={`viewfinder-overlay ${torchOn ? 'torch-active' : ''} ${scanFlash ? 'scan-flash' : ''}`} />
 
         {/* Top Controls Overlay */}
@@ -93,7 +176,8 @@ export function PackageScannerCard({
           <div className="camera-info-pill">
             <Camera className="w-4 h-4 text-purple-600" />
             <span>
-              {cameraMode === 'rear' ? 'Rear camera' : 'Front camera'} • 1080p
+              {cameraMode === 'rear' ? 'Rear camera' : 'Front camera'} •{' '}
+              {cameraActive ? 'Live' : 'Ready'}
             </span>
           </div>
           <div className="viewfinder-quick-actions">
@@ -140,7 +224,7 @@ export function PackageScannerCard({
           <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* QR Reticle / Target Box (Clickable to scan) */}
+        {/* QR Reticle / Target Box (Clickable fallback & scan frame) */}
         <div
           className={`scan-target-box ${scanFlash ? 'scanned-pulse' : ''}`}
           onClick={handleTriggerScan}
@@ -232,3 +316,5 @@ export function PackageScannerCard({
     </div>
   );
 }
+
+export default PackageScannerCard;
