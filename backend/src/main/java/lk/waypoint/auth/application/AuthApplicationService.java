@@ -37,7 +37,7 @@ public class AuthApplicationService {
     }
 
     @Transactional
-    public CreatedUserResult signup(String email, String password, String requestedRole,
+    public LoginResult signup(String email, String password, String requestedRole,
             String outletId, String depotId, String vehicleId) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         String role = requestedRole.equals("STOREKEEPER") ? "STORE_MANAGER" : requestedRole;
@@ -54,12 +54,12 @@ public class AuthApplicationService {
         }
 
         String apiRole = role.equals("STORE_MANAGER") ? "STOREKEEPER" : role;
-        return new CreatedUserResult(normalizedEmail, apiRole, displayName(apiRole));
+        return new LoginResult(jwtService.issue(normalizedEmail, apiRole), normalizedEmail, apiRole,
+                displayName(apiRole));
     }
 
     private String displayName(String role) {
         return switch (role) {
-            case "ADMIN" -> "Admin";
             case "STOREKEEPER" -> "Storekeeper";
             case "DISPATCHER" -> "Dispatcher";
             case "LOADER" -> "Loader";
@@ -70,5 +70,4 @@ public class AuthApplicationService {
 
     private record UserRow(String email, String passwordHash, String role) { }
     public record LoginResult(String accessToken, String email, String role, String displayName) { }
-    public record CreatedUserResult(String email, String role, String displayName) { }
 }

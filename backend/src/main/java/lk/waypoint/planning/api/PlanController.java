@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import org.springframework.security.core.Authentication;
 import lk.waypoint.planning.application.PlanRunApplicationService;
 import lk.waypoint.planning.application.PlanRunApplicationService.PlanRunResult;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,8 +25,8 @@ public class PlanController {
 
     @PostMapping("/run")
     @ResponseStatus(HttpStatus.CREATED)
-    public PlanRunResult run(@Valid @RequestBody RunPlanRequest request, Authentication authentication) {
-        return service.run(request.depotId(), request.planDate(), authentication.getName());
+    public PlanRunResult run(@Valid @RequestBody RunPlanRequest request) {
+        return service.run(request.depotId(), request.planDate());
     }
 
     public record RunPlanRequest(@NotBlank String depotId, @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
