@@ -12,6 +12,7 @@ export function DispatcherDashboardPage() {
   const [date, setDate] = useState(today);
   const [isPlanningModalOpen, setIsPlanningModalOpen] = useState(false);
   const [planResult, setPlanResult] = useState<PlanRunResult | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [isAllocating, setIsAllocating] = useState(false);
   const [, setVehicles] = useState<Vehicle[]>([]);
 
@@ -40,18 +41,12 @@ export function DispatcherDashboardPage() {
 
   const handleRunPlanning = async () => {
     setIsAllocating(true);
+    setPlanError(null);
     try {
       const result = await api.runPlan('PELIYAGODA', date);
       setPlanResult(result);
-    } catch {
-      setPlanResult({
-        planId: 'PLAN-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-        depotId: 'PELIYAGODA',
-        planDate: date,
-        tripCount: 14,
-        deferralCount: 1,
-        deferrals: [{ orderId: 'O-0989', reasonCode: 'TIME_BUDGET', priorityScore: 85 }],
-      });
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : 'Planning could not be completed.');
     } finally {
       setIsAllocating(false);
     }
@@ -203,6 +198,8 @@ export function DispatcherDashboardPage() {
               </div>
             </div>
           )}
+
+          {planError && <p role="alert" style={{ color: 'var(--status-danger-text)', fontSize: 12 }}>{planError}</p>}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
             <button className="btn-secondary" onClick={() => setIsPlanningModalOpen(false)} type="button">Close</button>

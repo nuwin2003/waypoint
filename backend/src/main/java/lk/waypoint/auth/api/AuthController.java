@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lk.waypoint.auth.application.AuthApplicationService;
 import lk.waypoint.auth.application.AuthApplicationService.LoginResult;
+import lk.waypoint.auth.application.AuthApplicationService.CreatedUserResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
-    public LoginResult signup(@Valid @RequestBody SignupRequest request) {
+    public CreatedUserResult signup(@Valid @RequestBody SignupRequest request) {
         return service.signup(request.email(), request.password(), request.role(),
                 request.outletId(), request.depotId(), request.vehicleId());
     }

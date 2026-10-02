@@ -1,4 +1,5 @@
 export type TempRequirement = 'CHILLED' | 'AMBIENT';
+export type ProductBrandCode = 'FRESH' | 'STYLE' | 'TECH';
 
 export type Outlet = {
   id: string;
@@ -24,6 +25,8 @@ export type Order = {
   id: string;
   orderRef: string;
   outletId: string;
+  productBrand: ProductBrandCode;
+  itemDescription: string;
   orderDate: string;
   afterCutoff: boolean;
   tempRequirement: TempRequirement;
@@ -45,7 +48,13 @@ export type PlanRunResult = {
 export type LoginResponse = {
   accessToken: string;
   email: string;
-  role: 'STOREKEEPER' | 'DISPATCHER' | 'LOADER' | 'DRIVER';
+  role: 'ADMIN' | 'STOREKEEPER' | 'DISPATCHER' | 'LOADER' | 'DRIVER';
+  displayName: string;
+};
+
+export type CreatedUserResponse = {
+  email: string;
+  role: LoginResponse['role'];
   displayName: string;
 };
 
@@ -58,10 +67,20 @@ async function request<T>(path: string, options?: RequestInit, authenticated = t
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers ?? {}) },
   });
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || `Request failed with ${response.status}`);
+    const body = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
+    throw new Error(body?.detail || body?.message || `Request failed with ${response.status}`);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+function queryString(values: Record<string, string | undefined>): string {
+  const query = new URLSearchParams();
+  Object.entries(values).forEach(([key, value]) => {
+    if (value) query.set(key, value);
+  });
+  const encoded = query.toString();
+  return encoded ? `?${encoded}` : '';
 }
 
 export const api = {
@@ -70,22 +89,23 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   }, false),
-  signup: (payload: {
+  createUser: (payload: {
     email: string;
     password: string;
     role: 'STOREKEEPER' | 'DISPATCHER' | 'LOADER' | 'DRIVER';
     outletId?: string;
     depotId?: string;
     vehicleId?: string;
-  }) => request<LoginResponse>('/auth/signup', {
+  }) => request<CreatedUserResponse>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
-  }, false),
-  outlets: (depotId?: string) => request<Outlet[]>(`/outlets${depotId ? `?depotId=${depotId}` : ''}`),
-  vehicles: (depotId?: string) => request<Vehicle[]>(`/vehicles/availability${depotId ? `?depotId=${depotId}` : ''}`),
-  orders: (outletId: string, orderDate: string) => request<Order[]>(`/orders?outletId=${outletId}&orderDate=${orderDate}`),
+  }),
+  outlets: (depotId?: string) => request<Outlet[]>(`/outlets${queryString({ depotId })}`),
+  vehicles: (depotId?: string) => request<Vehicle[]>(`/vehicles/availability${queryString({ depotId })}`),
+  orders: (outletId: string | undefined, orderDate: string) => request<Order[]>(`/orders${queryString({ outletId, orderDate })}`),
   createOrder: (payload: {
-    outletId: string;
+    productBrand: ProductBrandCode;
+    itemDescription: string;
     deliveryDate: string;
     tempRequirement: TempRequirement;
     units: number;

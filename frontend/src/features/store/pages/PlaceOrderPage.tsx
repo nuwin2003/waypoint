@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { StoreCutoffBanner, StoreIcon, StoreIconButton, StorePageHeader, StoreStatusBadge } from '../components/StoreUI';
 import { initialSchedules, type OrderSchedule, type ProductBrand } from '../data/storeData';
+import { api } from '../../../api';
 
 const brands: ProductBrand[] = ['Fresh dry', 'Fresh chilled', 'Style', 'Tech'];
 const defaultItems: Record<ProductBrand, string> = {
@@ -18,6 +19,10 @@ export function PlaceOrderPage() {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [reviewOpen, setReviewOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [weightKg, setWeightKg] = useState('100');
+  const [volumeM3, setVolumeM3] = useState('1.5');
   const [schedules, setSchedules] = useState(initialSchedules);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<OrderSchedule | null>(null);
@@ -42,9 +47,26 @@ export function PlaceOrderPage() {
     setScheduleFormOpen(true);
   };
 
-  const saveOrder = () => {
-    setReviewOpen(false);
-    setSubmitted(true);
+  const saveOrder = async () => {
+    setSubmitting(true);
+    setOrderError(null);
+    try {
+      await api.createOrder({
+        productBrand: brand.startsWith('Fresh') ? 'FRESH' : brand.toUpperCase() as 'STYLE' | 'TECH',
+        itemDescription: item.trim(),
+        deliveryDate,
+        tempRequirement: brand === 'Fresh chilled' ? 'CHILLED' : 'AMBIENT',
+        units: Number(quantity),
+        weightKg: Number(weightKg),
+        volumeM3: Number(volumeM3),
+      });
+      setReviewOpen(false);
+      setSubmitted(true);
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'Your order could not be submitted.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const saveSchedule = (event: FormEvent) => {
@@ -77,6 +99,7 @@ export function PlaceOrderPage() {
       </div>
 
       {submitted && <div className="store-notice success" role="status">Your order has been submitted for dispatch review.<button type="button" onClick={() => setSubmitted(false)} aria-label="Dismiss">×</button></div>}
+      {orderError && <div className="store-notice" role="alert">{orderError}</div>}
 
       {mode === 'new' ? (
         <form className="store-panel store-order-form" onSubmit={(event) => { event.preventDefault(); setReviewOpen(true); }}>
@@ -90,6 +113,10 @@ export function PlaceOrderPage() {
           <div className="store-form-grid two-columns">
             <label>Item or unit<input required value={item} onChange={(event) => setItem(event.target.value)} /></label>
             <label>Quantity<input required type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+          </div>
+          <div className="store-form-grid two-columns">
+            <label>Total weight (kg)<input required type="number" min="0.01" step="0.01" value={weightKg} onChange={(event) => setWeightKg(event.target.value)} /></label>
+            <label>Total volume (m³)<input required type="number" min="0.001" step="0.001" value={volumeM3} onChange={(event) => setVolumeM3(event.target.value)} /></label>
           </div>
           <label className="store-field">Requested delivery date<input required type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} /></label>
           <p className="store-form-hint">{brand} cadence is applied when dispatch confirms the order.</p>
@@ -118,7 +145,7 @@ export function PlaceOrderPage() {
         </section>
       )}
 
-      {reviewOpen && <div className="store-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setReviewOpen(false); }}><section className="store-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title"><h2 id="review-title">Review order</h2><p>Check the details before submitting your request.</p><dl><div><dt>Brand</dt><dd>{brand}</dd></div><div><dt>Item</dt><dd>{item}</dd></div><div><dt>Quantity</dt><dd>{quantity} units</dd></div><div><dt>Delivery date</dt><dd>{deliveryDate}</dd></div></dl><div className="store-form-actions"><button className="store-secondary-button" type="button" onClick={() => setReviewOpen(false)}>Go back</button><button className="store-primary-button" type="button" onClick={saveOrder}>Submit order</button></div></section></div>}
+      {reviewOpen && <div className="store-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !submitting) setReviewOpen(false); }}><section className="store-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title"><h2 id="review-title">Review order</h2><p>Check the details before submitting your request.</p><dl><div><dt>Brand</dt><dd>{brand}</dd></div><div><dt>Item</dt><dd>{item}</dd></div><div><dt>Quantity</dt><dd>{quantity} units</dd></div><div><dt>Weight / volume</dt><dd>{weightKg} kg · {volumeM3} m³</dd></div><div><dt>Delivery date</dt><dd>{deliveryDate}</dd></div></dl><div className="store-form-actions"><button className="store-secondary-button" type="button" onClick={() => setReviewOpen(false)} disabled={submitting}>Go back</button><button className="store-primary-button" type="button" onClick={saveOrder} disabled={submitting}>{submitting ? 'Submitting…' : 'Submit order'}</button></div></section></div>}
     </div>
   );
 }
