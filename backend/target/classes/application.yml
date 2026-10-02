@@ -4,7 +4,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/waypoint}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:nuwin47212}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -21,5 +21,5 @@ server:
   port: ${SERVER_PORT:8082}
 waypoint:
   security:
-    jwt-secret: ${JWT_SECRET:development-secret-change-me-please-32chars}
+    jwt-secret: ${JWT_SECRET}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:28800}

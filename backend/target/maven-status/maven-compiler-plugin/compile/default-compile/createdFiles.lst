@@ -12,6 +12,8 @@ lk\waypoint\auth\application\AuthApplicationService$UserRow.class
 lk\waypoint\planning\domain\engine\Allocator$Assignment.class
 lk\waypoint\orders\domain\OrderCutoffPolicy$Decision.class
 lk\waypoint\planning\domain\engine\VehicleTemperature.class
+lk\waypoint\planning\domain\PlanningRepository.class
+lk\waypoint\masterdata\domain\MasterDataRepository.class
 lk\waypoint\orders\api\OrderController$CreateOrderRequest.class
 lk\waypoint\planning\domain\engine\VehicleType.class
 lk\waypoint\orders\domain\OrderCutoffPolicy.class
@@ -34,12 +36,14 @@ lk\waypoint\planning\domain\engine\RuleValidator$RuleFailure.class
 lk\waypoint\planning\domain\engine\PlanningVehicle.class
 lk\waypoint\planning\domain\engine\PriorityScorer$Score.class
 lk\waypoint\orders\application\OrderApplicationService.class
+lk\waypoint\masterdata\infrastructure\JdbcMasterDataRepository.class
 lk\waypoint\planning\application\PlanningConfig.class
 lk\waypoint\auth\application\AuthApplicationService.class
 lk\waypoint\masterdata\domain\VehicleSummary.class
 lk\waypoint\orders\infrastructure\JdbcOrderRepository.class
 lk\waypoint\planning\domain\engine\AllocationResult$Deferral.class
 lk\waypoint\planning\domain\engine\DockType.class
+lk\waypoint\planning\infrastructure\JdbcPlanningRepository.class
 lk\waypoint\planning\domain\engine\DefaultServiceAllowances.class
 lk\waypoint\masterdata\api\MasterDataController.class
 lk\waypoint\planning\domain\engine\Brand.class
@@ -54,4 +58,6 @@ lk\waypoint\orders\domain\OrderRepository.class
 lk\waypoint\planning\domain\engine\TravelProfile.class
 lk\waypoint\planning\domain\engine\VehicleStatus.class
 lk\waypoint\security\JwtService.class
+lk\waypoint\common\MethodLoggingAspect.class
+lk\waypoint\auth\application\AuthApplicationService$CreatedUserResult.class
 lk\waypoint\planning\domain\engine\RuleValidator.class

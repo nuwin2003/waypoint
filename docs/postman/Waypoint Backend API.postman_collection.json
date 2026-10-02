@@ -1,0 +1,343 @@
+{
+  "info": {
+    "_postman_id": "5bc9b974-0af8-4bb4-9e65-98c6ef196433",
+    "name": "Waypoint Backend API",
+    "description": "Postman collection for all HTTP endpoints currently implemented by the Waypoint backend. Set baseUrl and login credentials in the matching Postman environment. Run Login to store accessToken before calling protected endpoints. Hosted API base URL should include the scheme and host only; the collection appends /api/v1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "depotId",
+      "value": "PELIYAGODA",
+      "type": "string"
+    },
+    {
+      "key": "outletId",
+      "value": "OUT001",
+      "type": "string"
+    },
+    {
+      "key": "orderDate",
+      "value": "2026-10-03",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "description": "Public liveness endpoint. No authentication required.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 UP",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UP\",\n  \"timestamp\": \"2026-10-03T12:00:00+05:30\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "description": "Public. Set loginEmail and loginPassword in the Postman environment. Successful response stores accessToken as a collection variable for protected requests.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.accessToken) pm.collectionVariables.set(\"accessToken\", body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 Login successful",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"accessToken\": \"<JWT returned by the API>\",\n  \"email\": \"dispatcher@example.com\",\n  \"role\": \"DISPATCHER\",\n  \"displayName\": \"Dispatcher\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create user (admin only)",
+          "description": "Requires an ADMIN bearer token in accessToken. Creates an operational account; this endpoint does not return a JWT. Supported roles: STOREKEEPER, STORE_MANAGER, DISPATCHER, LOADER, DRIVER.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"loader@example.com\",\n  \"password\": \"<choose-a-strong-password>\",\n  \"role\": \"LOADER\",\n  \"depotId\": \"PELIYAGODA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/signup"
+          },
+          "response": [
+            {
+              "name": "201 User created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"email\": \"loader@example.com\",\n  \"role\": \"LOADER\",\n  \"displayName\": \"Loader\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Master data",
+      "item": [
+        {
+          "name": "List outlets",
+          "description": "Requires DISPATCHER, LOADER, or ADMIN. depotId is optional; omit it to list all active outlets permitted to the caller.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/outlets?depotId={{depotId}}"
+          },
+          "response": [
+            {
+              "name": "200 Outlets",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": \"OUT001\",\n    \"name\": \"Fresh Gampaha\",\n    \"brand\": \"FRESH\",\n    \"districtId\": \"GAMPAHA\",\n    \"depotId\": \"PELIYAGODA\",\n    \"parkingConstraint\": \"STANDARD\",\n    \"dockType\": \"REAR_DOCK\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "List vehicle availability",
+          "description": "Requires DISPATCHER, LOADER, or ADMIN. depotId is optional. Returns vehicle type, temperature class, status, and capacities.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vehicles/availability?depotId={{depotId}}"
+          },
+          "response": [
+            {
+              "name": "200 Vehicles",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": \"VEH001\",\n    \"depotId\": \"PELIYAGODA\",\n    \"type\": \"TRUCK\",\n    \"temperature\": \"REEFER\",\n    \"status\": \"AVAILABLE\",\n    \"weightCapKg\": 8000,\n    \"volumeCapM3\": 32\n  }\n]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Place order",
+          "description": "Requires STOREKEEPER. Outlet is derived from the authenticated user; do not send outletId. Product brand must be FRESH, STYLE, or TECH. Temperature must be CHILLED or AMBIENT.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productBrand\": \"FRESH\",\n  \"itemDescription\": \"Chilled crates\",\n  \"deliveryDate\": \"2026-10-04\",\n  \"tempRequirement\": \"CHILLED\",\n  \"units\": 20,\n  \"weightKg\": 100,\n  \"volumeM3\": 1.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/orders"
+          },
+          "response": [
+            {
+              "name": "201 Order created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"b4f9c201-8b19-480c-8396-39185d7913b3\",\n  \"orderRef\": \"WPT-B4F9C201\",\n  \"outletId\": \"OUT001\",\n  \"productBrand\": \"FRESH\",\n  \"itemDescription\": \"Chilled crates\",\n  \"orderDate\": \"2026-10-04\",\n  \"afterCutoff\": false,\n  \"tempRequirement\": \"CHILLED\",\n  \"units\": 20,\n  \"weightKg\": 100,\n  \"volumeM3\": 1.5,\n  \"status\": \"PLACED\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List orders by outlet and date",
+          "description": "Requires STOREKEEPER, DISPATCHER, or ADMIN. Storekeepers are scoped to their assigned outlet and the server ignores outletId for them. Dispatchers must provide an outlet in their assigned depot; admins can query any outlet.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?outletId={{outletId}}&orderDate={{orderDate}}"
+          },
+          "response": [
+            {
+              "name": "200 Orders",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": \"b4f9c201-8b19-480c-8396-39185d7913b3\",\n    \"orderRef\": \"WPT-B4F9C201\",\n    \"outletId\": \"OUT001\",\n    \"productBrand\": \"FRESH\",\n    \"itemDescription\": \"Chilled crates\",\n    \"orderDate\": \"2026-10-04\",\n    \"afterCutoff\": false,\n    \"tempRequirement\": \"CHILLED\",\n    \"units\": 20,\n    \"weightKg\": 100,\n    \"volumeM3\": 1.5,\n    \"status\": \"PLACED\"\n  }\n]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Planning",
+      "item": [
+        {
+          "name": "Run allocation plan",
+          "description": "Requires DISPATCHER or ADMIN. Dispatcher access is restricted to their assigned depot. Creates a draft plan, trips, trip stops, and deferral records.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depotId\": \"{{depotId}}\",\n  \"planDate\": \"{{orderDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/plans/run"
+          },
+          "response": [
+            {
+              "name": "201 Plan created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"planId\": \"25b93139-f2e4-4f4f-95b7-480df8524e0c\",\n  \"depotId\": \"PELIYAGODA\",\n  \"planDate\": \"2026-10-03\",\n  \"tripCount\": 2,\n  \"deferralCount\": 1,\n  \"deferrals\": [\n    {\n      \"orderId\": \"b4f9c201-8b19-480c-8396-39185d7913b3\",\n      \"reasonCode\": \"CAPACITY\",\n      \"unavoidable\": false,\n      \"priorityScore\": 72,\n      \"scoreBreakdown\": {\n        \"age\": 20,\n        \"repeatedDeferral\": 52\n      }\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

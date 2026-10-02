@@ -1,10 +1,5 @@
-FROM node:22-alpine AS build
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY package.json .
-RUN npm install
-COPY . .
-RUN npm run build
-FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+COPY waypoint-api-0.1.0.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
