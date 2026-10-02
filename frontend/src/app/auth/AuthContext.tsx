@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'DISPATCHER' | 'STOREKEEPER' | 'LOADER' | 'DRIVER';
+export type UserRole = 'ADMIN' | 'DISPATCHER' | 'STOREKEEPER' | 'LOADER' | 'DRIVER';
 
 export function isUserRole(value: unknown): value is UserRole {
-  return value === 'DISPATCHER' || value === 'STOREKEEPER' || value === 'LOADER' || value === 'DRIVER';
+  return value === 'ADMIN' || value === 'DISPATCHER' || value === 'STOREKEEPER' || value === 'LOADER' || value === 'DRIVER';
 }
 
 export function roleHomePath(role: UserRole): string {
   switch (role) {
+    case 'ADMIN': return '/admin';
     case 'STOREKEEPER': return '/store';
     case 'LOADER': return '/load';
     case 'DRIVER': return '/drive';

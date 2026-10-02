@@ -26,6 +26,15 @@ import { TrackOrdersPage } from '../features/store/pages/TrackOrdersPage';
 import { ReceiveConfirmPage } from '../features/store/pages/ReceiveConfirmPage';
 import { OrderHistoryPage } from '../features/store/pages/OrderHistoryPage';
 import { DriverWorkspace } from '../features/driver/DriverWorkspace';
+import { AdminWorkspace } from '../features/admin/AdminWorkspace';
+import { AdminOverviewPage } from '../features/admin/pages/AdminOverviewPage';
+import { AuditTrailPage } from '../features/admin/pages/AuditTrailPage';
+import { ForecastPage } from '../features/admin/pages/ForecastPage';
+import { FineLedgerPage } from '../features/admin/pages/FineLedgerPage';
+import { FuelIntegrityPage } from '../features/admin/pages/FuelIntegrityPage';
+import { UsersPage } from '../features/admin/pages/UsersPage';
+import { MasterDataPage } from '../features/admin/pages/MasterDataPage';
+import { ConfigurationPage } from '../features/admin/pages/ConfigurationPage';
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -61,6 +70,18 @@ export default function App() {
             </RequireAuth>
           }
         >
+          {/* Dispatcher */}
+          <Route path="/admin" element={<RoleRoute role="ADMIN"><AdminWorkspace /></RoleRoute>}>
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="audit" element={<AuditTrailPage />} />
+            <Route path="forecast" element={<ForecastPage />} />
+            <Route path="fines" element={<FineLedgerPage />} />
+            <Route path="fuel" element={<FuelIntegrityPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="master-data" element={<MasterDataPage />} />
+            <Route path="configuration" element={<ConfigurationPage />} />
+          </Route>
+
           {/* Dispatcher */}
           <Route path="/dispatch" element={<RoleRoute role="DISPATCHER"><DispatcherWorkspace /></RoleRoute>}>
             <Route index element={<DispatcherDashboardPage />} />

@@ -599,6 +599,7 @@ html, body {
 .nav-icon svg { display: block; flex: 0 0 auto; }
 .nav-icon img, .nav-icon-box img { display: block; width: 24px; height: 24px; object-fit: contain; flex: 0 0 auto; }
 .nav-label { white-space: nowrap; }
+.nav-badge { display: inline-flex; min-width: 20px; height: 18px; align-items: center; justify-content: center; margin-left: auto; padding-inline: 5px; border-radius: 5px; background: #fff0dc; color: #b76714; font-size: 10px; font-weight: 600; }
 
 .logout-link {
   width: 100%;
@@ -631,6 +632,8 @@ html, body {
     gap: 0;
     padding-inline: 8px;
   }
+
+  .sidebar.collapsed .nav-badge { display: none; }
 }
 
 .sidebar-footer {
