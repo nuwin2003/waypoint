@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logoShortImg from '../../assets/logo-short.png';
 import {
   Menu,
@@ -9,8 +9,10 @@ import {
   Sun,
   Moon,
   Bell,
-  LogOut,
 } from 'lucide-react';
+import { NotificationCard, NotificationItem } from '../../shared/ui/NotificationCard';
+import { ProfileCard } from '../../shared/ui/ProfileCard';
+import { UserRole } from '../auth/AuthContext';
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -21,7 +23,7 @@ interface TopBarProps {
   onSearchChange: (query: string) => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
-  user: { displayName?: string; email?: string } | null;
+  user: { displayName?: string; email?: string; role?: UserRole } | null;
   onSignOut: () => void;
 }
 
@@ -37,10 +39,32 @@ export function TopBar({
   user,
   onSignOut,
 }: TopBarProps) {
+  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: '1',
+      title: 'Vehicle breakdown — R-5',
+      description: 'M. Rizwan reported a breakdown near Kadawatha. 1 unserved stop (Tech Colombo Flagship).',
+      time: '09:12',
+      unread: true,
+    },
+    {
+      id: '2',
+      title: 'Offline conflict on R-1',
+      description: 'Driver completed stop 2 offline before your reassignment. Both records kept.',
+      time: '08:58',
+      unread: true,
+    },
+  ]);
 
-  // Close profile dropdown when clicking outside
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -49,14 +73,20 @@ export function TopBar({
       ) {
         setProfileOpen(false);
       }
+      if (
+        notificationMenuRef.current &&
+        !notificationMenuRef.current.contains(event.target as Node)
+      ) {
+        setNotificationOpen(false);
+      }
     }
-    if (profileOpen) {
+    if (profileOpen || notificationOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [profileOpen]);
+  }, [profileOpen, notificationOpen]);
 
   const initials = user?.displayName
     ? user.displayName
@@ -65,7 +95,7 @@ export function TopBar({
         .join('')
         .slice(0, 2)
         .toUpperCase()
-    : 'WP';
+    : (user?.role === 'DRIVER' ? 'NS' : 'SP');
 
   return (
     <header className="top-header">
@@ -117,7 +147,7 @@ export function TopBar({
       {/* User Greeting */}
       <div className="header-left">
         <span className="header-greeting">
-          Good morning, <strong>{user?.displayName ?? 'User'}</strong>
+          Good morning, <strong>{user?.displayName ?? (user?.role === 'DRIVER' ? 'Nuwan Silva' : 'Sunil Perera')}</strong>
         </span>
       </div>
 
@@ -148,15 +178,38 @@ export function TopBar({
         </button>
 
         {/* Notifications */}
-        <button
-          className="icon-btn notification-btn"
-          type="button"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="badge-dot" />
-        </button>
+        <div className="relative" ref={notificationMenuRef}>
+          <button
+            className={`icon-btn notification-btn ${notificationOpen ? 'active' : ''}`}
+            type="button"
+            aria-label={`Notifications (${unreadCount} unread)`}
+            title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+            aria-expanded={notificationOpen}
+            onClick={() => setNotificationOpen(!notificationOpen)}
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="badge-count">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          {notificationOpen && (
+            <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[380px] sm:w-[420px] max-w-[calc(100vw-24px)] animate-in fade-in zoom-in-95 duration-150">
+              <NotificationCard
+                notifications={notifications}
+                onMarkAllRead={() => {
+                  setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+                }}
+                onNotificationClick={(item) => {
+                  setNotifications((prev) =>
+                    prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
+                  );
+                }}
+              />
+            </div>
+          )}
+        </div>
 
         {/* User Profile Menu */}
         <div className="profile-menu-wrap" ref={profileMenuRef}>
@@ -171,22 +224,24 @@ export function TopBar({
             {initials}
           </button>
           {profileOpen && (
-            <div className="profile-menu">
-              <div className="profile-menu-user">
-                <strong>{user?.displayName ?? 'User'}</strong>
-                <small>{user?.email ?? 'user@waypoint.com'}</small>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
+            <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[300px] sm:w-[310px] max-w-[calc(100vw-24px)] animate-in fade-in zoom-in-95 duration-150">
+              <ProfileCard
+                user={user}
+                onSignOut={() => {
                   setProfileOpen(false);
                   onSignOut();
                 }}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4 text-inherit inline" />
-                <span>Sign out</span>
-              </button>
+                onNavigate={(path) => {
+                  setProfileOpen(false);
+                  navigate(path);
+                }}
+                onItemClick={(key) => {
+                  if (key === 'notifications') {
+                    setProfileOpen(false);
+                    setNotificationOpen(true);
+                  }
+                }}
+              />
             </div>
           )}
         </div>

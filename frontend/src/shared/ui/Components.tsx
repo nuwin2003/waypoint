@@ -145,3 +145,11 @@ export function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; o
     </div>
   );
 }
+
+export { NotificationCard } from './NotificationCard';
+export type { NotificationItem, NotificationCardProps } from './NotificationCard';
+
+export { ProfileCard } from './ProfileCard';
+export type { ProfileCardProps } from './ProfileCard';
+
+
