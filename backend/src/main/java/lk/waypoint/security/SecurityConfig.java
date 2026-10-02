@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/health", "/actuator/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders").hasRole("STOREKEEPER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders").hasAnyRole("STOREKEEPER", "DISPATCHER", "ADMIN")
