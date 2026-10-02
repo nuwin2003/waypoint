@@ -4,6 +4,7 @@
 !.env.example
 
 # Java build output
+backend/
 backend/target/
 
 # Node dependencies and build output
