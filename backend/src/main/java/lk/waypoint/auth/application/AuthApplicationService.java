@@ -60,6 +60,7 @@ public class AuthApplicationService {
 
     private String displayName(String role) {
         return switch (role) {
+            case "ADMIN" -> "Admin";
             case "STOREKEEPER" -> "Storekeeper";
             case "DISPATCHER" -> "Dispatcher";
             case "LOADER" -> "Loader";

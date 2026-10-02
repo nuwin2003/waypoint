@@ -31,9 +31,23 @@ import scanPackagesGray from '../../assets/sidebar/scan-packages-gray.png';
 import scanPackagesPurple from '../../assets/sidebar/scan-packages-purple.png';
 import trackOrdersGray from '../../assets/sidebar/track-orders-gray.png';
 import trackOrdersPurple from '../../assets/sidebar/track-orders-purple.png';
+import auditTrailGray from '../../assets/sidebar/audit-trail-gray.png';
+import auditTrailPurple from '../../assets/sidebar/audit-trail-purple.png';
+import forecastGray from '../../assets/sidebar/forecast-gray.png';
+import forecastPurple from '../../assets/sidebar/forecast-purple.png';
+import fineLedgerGray from '../../assets/sidebar/fine-ledger-gray.png';
+import fineLedgerPurple from '../../assets/sidebar/fine-ledger-purple.png';
+import fuelIntegrityGray from '../../assets/sidebar/fuel-integrity-gray.png';
+import fuelIntegrityPurple from '../../assets/sidebar/fuel-integrity-purple.png';
+import usersGray from '../../assets/sidebar/users-gray.png';
+import usersPurple from '../../assets/sidebar/users-purple.png';
+import masterDataGray from '../../assets/sidebar/master-data-gray.png';
+import masterDataPurple from '../../assets/sidebar/master-data-purple.png';
+import configurationGray from '../../assets/sidebar/configuration-gray.png';
+import configurationPurple from '../../assets/sidebar/configuration-purple.png';
 
 type IconName = 'home' | 'map' | 'box' | 'truck' | 'radio' | 'alert' | 'list' | 'chart' | 'check' | 'pin' | 'fuel' | 'clock' | 'settings' | 'help' | 'search' | 'bell' | 'sun' | 'moon' | 'menu' | 'chevron' | 'logout';
-type SidebarIcon = 'dashboard' | 'defect-items' | 'emergency' | 'fleet' | 'history' | 'live-monitoring' | 'missing-items' | 'order-queue' | 'place-order' | 'planning' | 'receive-and-confirm' | 'scan-packages' | 'track-orders';
+type SidebarIcon = 'dashboard' | 'defect-items' | 'emergency' | 'fleet' | 'history' | 'live-monitoring' | 'missing-items' | 'order-queue' | 'place-order' | 'planning' | 'receive-and-confirm' | 'scan-packages' | 'track-orders' | 'audit-trail' | 'forecast' | 'fine-ledger' | 'fuel-integrity' | 'users' | 'master-data' | 'configuration';
 const sidebarIcons: Record<SidebarIcon, { gray: string; purple: string }> = {
   dashboard: { gray: dashboardGray, purple: dashboardPurple },
   'defect-items': { gray: defectItemsGray, purple: defectItemsPurple },
@@ -48,6 +62,13 @@ const sidebarIcons: Record<SidebarIcon, { gray: string; purple: string }> = {
   'receive-and-confirm': { gray: receiveAndConfirmGray, purple: receiveAndConfirmPurple },
   'scan-packages': { gray: scanPackagesGray, purple: scanPackagesPurple },
   'track-orders': { gray: trackOrdersGray, purple: trackOrdersPurple },
+  'audit-trail': { gray: auditTrailGray, purple: auditTrailPurple },
+  forecast: { gray: forecastGray, purple: forecastPurple },
+  'fine-ledger': { gray: fineLedgerGray, purple: fineLedgerPurple },
+  'fuel-integrity': { gray: fuelIntegrityGray, purple: fuelIntegrityPurple },
+  users: { gray: usersGray, purple: usersPurple },
+  'master-data': { gray: masterDataGray, purple: masterDataPurple },
+  configuration: { gray: configurationGray, purple: configurationPurple },
 };
 const iconPaths: Record<IconName, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9v11h13V9M9 20v-6h6v6', map: 'M3 6 8 4l8 2 5-2v14l-5 2-8-2-5 2zM8 4v14m8-12v14',
@@ -62,7 +83,17 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={iconPaths[name]} /></svg>;
 }
 
-const navItems: Record<UserRole, { icon?: IconName; asset?: SidebarIcon; label: string; path: string }[]> = {
+const navItems: Record<UserRole, { icon?: IconName; asset?: SidebarIcon; label: string; path: string; badge?: string }[]> = {
+  ADMIN: [
+    { asset: 'dashboard', label: 'Home', path: '/admin' },
+    { asset: 'audit-trail', label: 'Audit Trail', path: '/admin/audit' },
+    { asset: 'forecast', label: 'Forecast', path: '/admin/forecast' },
+    { asset: 'fine-ledger', label: 'Fine Ledger', path: '/admin/fines' },
+    { asset: 'fuel-integrity', label: 'Fuel Integrity', path: '/admin/fuel', badge: '3' },
+    { asset: 'users', label: 'Users', path: '/admin/users' },
+    { asset: 'master-data', label: 'Master Data', path: '/admin/master-data' },
+    { asset: 'configuration', label: 'Configuration', path: '/admin/configuration' },
+  ],
   DISPATCHER: [
     { asset: 'dashboard', label: 'Dashboard', path: '/dispatch' },
     { asset: 'order-queue', label: 'Order Queue', path: '/dispatch/orders' },
@@ -94,6 +125,7 @@ const navItems: Record<UserRole, { icon?: IconName; asset?: SidebarIcon; label: 
 };
 
 const workspaceLabels: Record<UserRole, string> = {
+  ADMIN: 'Admin operations',
   DISPATCHER: 'Dispatcher operations',
   LOADER: 'Loader operations',
   STOREKEEPER: 'Store Manager operations',
@@ -170,7 +202,7 @@ export function AppShell() {
           </div>
           <nav className="sidebar-nav" aria-label="Main navigation">
             {links.map((item) => <NavLink key={item.path} to={item.path} end={item.path.split('/').length === 2} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} onClick={() => setSidebarOpen(false)} aria-label={item.label} title={sidebarCollapsed ? item.label : undefined}>
-              {({ isActive }) => <><span className="nav-icon">{item.asset ? <img src={sidebarIcons[item.asset][isActive ? 'purple' : 'gray']} alt="" /> : item.icon ? <Icon name={item.icon} /> : null}</span><span className="nav-label">{item.label}</span></>}
+              {({ isActive }) => <><span className="nav-icon">{item.asset ? <img src={sidebarIcons[item.asset][isActive ? 'purple' : 'gray']} alt="" /> : item.icon ? <Icon name={item.icon} /> : null}</span><span className="nav-label">{item.label}</span>{item.badge && <span className="nav-badge">{item.badge}</span>}</>}
             </NavLink>)}
           </nav>
           <div className="sidebar-footer">
