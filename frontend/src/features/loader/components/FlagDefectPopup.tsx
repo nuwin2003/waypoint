@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { X, Camera } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Camera, RefreshCw } from 'lucide-react';
 import '../modalPopups.css';
 
 export interface FlagDefectPopupProps {
   isOpen?: boolean;
   onClose?: () => void;
-  onSubmit?: (data: { packageInfo: string; notes: string; photo?: File | null }) => void;
+  onSubmit?: (data: { packageInfo: string; notes: string; photo?: string | File | null }) => void;
   defaultPackage?: string;
 }
 
@@ -17,13 +17,94 @@ export function FlagDefectPopup({
 }: FlagDefectPopupProps) {
   const [packageInfo, setPackageInfo] = useState(defaultPackage);
   const [notes, setNotes] = useState('');
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Stop camera stream helper
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  // Cleanup on unmount or close
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   if (!isOpen) return null;
+
+  // Start live camera stream
+  const handleStartCamera = async () => {
+    if (capturedPhotoUrl) {
+      setCapturedPhotoUrl(null);
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+      setIsCameraActive(true);
+
+      // Attach stream to video element
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      }, 50);
+    } catch {
+      // If camera access fails, trigger file picker as fallback
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    }
+  };
+
+  // Capture snapshot from video stream
+  const handleTakeSnapshot = () => {
+    if (!videoRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      setCapturedPhotoUrl(photoDataUrl);
+    }
+
+    stopCameraStream();
+  };
+
+  // Handle file picker selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCapturedPhotoUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onSubmit) {
-      onSubmit({ packageInfo, notes });
+      onSubmit({ packageInfo, notes, photo: capturedPhotoUrl });
     }
   };
 
@@ -36,12 +117,25 @@ export function FlagDefectPopup({
         aria-modal="true"
         aria-labelledby="flag-defect-title"
       >
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+
         {/* Close Button */}
         {onClose && (
           <button
             type="button"
             className="waypoint-popup-close-btn"
-            onClick={onClose}
+            onClick={() => {
+              stopCameraStream();
+              onClose();
+            }}
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -75,18 +169,66 @@ export function FlagDefectPopup({
             />
           </div>
 
-          {/* Field: Photo Evidence */}
+          {/* Field: Photo Evidence with Camera Access */}
           <div className="popup-field-group">
             <label className="popup-field-label">
               Photo evidence<span className="required-star">*</span>
             </label>
-            <div className="popup-photo-capture-box" role="button" tabIndex={0}>
-              <div className="popup-camera-icon-badge">
-                <Camera className="w-5 h-5" />
+
+            {/* State 1: Live Camera Viewfinder */}
+            {isCameraActive ? (
+              <div className="popup-live-camera-feed-box">
+                <video
+                  ref={videoRef}
+                  className="popup-live-camera-video"
+                  playsInline
+                  autoPlay
+                  muted
+                />
+                <button
+                  type="button"
+                  className="popup-take-snap-btn"
+                  onClick={handleTakeSnapshot}
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Take Photo</span>
+                </button>
               </div>
-              <strong className="popup-capture-title">Capture photo</strong>
-              <span className="popup-capture-sub">Glove-friendly tap target</span>
-            </div>
+            ) : capturedPhotoUrl ? (
+              /* State 2: Captured Photo Preview */
+              <div className="popup-photo-preview-container">
+                <img
+                  src={capturedPhotoUrl}
+                  alt="Defect evidence snapshot"
+                  className="popup-photo-preview-img"
+                />
+                <div className="popup-photo-preview-overlay">
+                  <button
+                    type="button"
+                    className="popup-retake-btn"
+                    onClick={handleStartCamera}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retake</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* State 3: Glove-friendly Tap Target to Open Camera */
+              <div
+                className="popup-photo-capture-box"
+                role="button"
+                tabIndex={0}
+                onClick={handleStartCamera}
+              >
+                <div className="popup-camera-icon-badge">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <strong className="popup-capture-title">Capture photo</strong>
+                <span className="popup-capture-sub">Glove-friendly tap target</span>
+              </div>
+            )}
+
             <span className="popup-field-hint">
               JPG or PNG, max 10MB · Hold tablet steady
             </span>

@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, LayoutGrid, List, Box } from 'lucide-react';
+import { VerifyPackagePopup } from './VerifyPackagePopup';
+import { OrderSummaryPopup, OrderSummaryData } from './OrderSummaryPopup';
+import { FlagDefectPopup } from './FlagDefectPopup';
 
 export type ShipmentStatus = 'scanned' | 'missing';
 
@@ -25,11 +27,18 @@ export function ShipmentSequenceSection({
   onScan,
   onMarkMissing,
 }: ShipmentSequenceSectionProps) {
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sortAscending, setSortAscending] = useState(true);
   const [isGridView, setIsGridView] = useState(true);
   const [shipmentStatuses, setShipmentStatuses] = useState<Record<string, ShipmentStatus | undefined>>({});
+
+  // Active shipment being processed in the modal flow
+  const [activeShipment, setActiveShipment] = useState<ShipmentItem | null>(null);
+
+  // Modal flow states
+  const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+  const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState(false);
+  const [isFlagDefectOpen, setIsFlagDefectOpen] = useState(false);
 
   const visibleShipments = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -44,15 +53,50 @@ export function ShipmentSequenceSection({
       .sort((a, b) => (sortAscending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
   }, [shipments, search, sortAscending]);
 
-  const handleScan = (id: string) => {
+  // Step 1: User clicks "Scan" on a card -> Opens VerifyPackagePopup
+  const handleOpenScan = (shipment: ShipmentItem) => {
+    setActiveShipment(shipment);
+    setIsVerifyOpen(true);
     if (onScan) {
-      onScan(id);
-    } else {
-      navigate('/load/scan-packages');
+      onScan(shipment.id);
     }
   };
 
-  const handleMissing = (id: string) => {
+  // Step 2: User clicks "Scan" inside VerifyPackagePopup -> Opens OrderSummaryPopup
+  const handleVerifyScanSuccess = () => {
+    setIsVerifyOpen(false);
+    setIsOrderSummaryOpen(true);
+  };
+
+  // Step 3A: User clicks "Confirm" in OrderSummaryPopup -> Marks package as scanned
+  const handleConfirmOrder = () => {
+    if (activeShipment) {
+      setShipmentStatuses((prev) => ({
+        ...prev,
+        [activeShipment.id]: 'scanned',
+      }));
+    }
+    setIsOrderSummaryOpen(false);
+  };
+
+  // Step 3B: User clicks "Report Defect" in OrderSummaryPopup -> Transitions to FlagDefectPopup
+  const handleReportDefectTransition = () => {
+    setIsOrderSummaryOpen(false);
+    setIsFlagDefectOpen(true);
+  };
+
+  // Step 4: User submits defect form -> Flags package and closes
+  const handleSubmitDefect = () => {
+    if (activeShipment) {
+      setShipmentStatuses((prev) => ({
+        ...prev,
+        [activeShipment.id]: 'missing',
+      }));
+    }
+    setIsFlagDefectOpen(false);
+  };
+
+  const handleToggleMissing = (id: string) => {
     setShipmentStatuses((prev) => ({
       ...prev,
       [id]: prev[id] === 'missing' ? undefined : 'missing',
@@ -60,6 +104,16 @@ export function ShipmentSequenceSection({
     if (onMarkMissing) {
       onMarkMissing(id);
     }
+  };
+
+  const orderSummaryData: OrderSummaryData = {
+    orderId: '153468790876',
+    shippingAddress: "45 onye's house",
+    trackingId: '153468790876',
+    quantity: activeShipment?.quantity.replace(/\D/g, '') || '10',
+    itemCount: activeShipment?.quantity.replace(/\D/g, '') || '10',
+    estDeliveryDate: '11/03/26; 04:54 pm',
+    tag: 'Refregirated',
   };
 
   return (
@@ -163,14 +217,14 @@ export function ShipmentSequenceSection({
                 <button
                   type="button"
                   className="loader-scan-button"
-                  onClick={() => handleScan(shipment.id)}
+                  onClick={() => handleOpenScan(shipment)}
                 >
                   Scan
                 </button>
                 <button
                   type="button"
                   className="loader-missing-button"
-                  onClick={() => handleMissing(shipment.id)}
+                  onClick={() => handleToggleMissing(shipment.id)}
                 >
                   Missing
                 </button>
@@ -183,6 +237,33 @@ export function ShipmentSequenceSection({
           <p className="loader-empty-state">No shipments match your search.</p>
         )}
       </div>
+
+      {/* Popups Workflow */}
+      {/* 1. Verify the package popup */}
+      <VerifyPackagePopup
+        isOpen={isVerifyOpen}
+        onClose={() => setIsVerifyOpen(false)}
+        onScan={handleVerifyScanSuccess}
+      />
+
+      {/* 2. Order summary popup */}
+      <OrderSummaryPopup
+        isOpen={isOrderSummaryOpen}
+        onClose={() => setIsOrderSummaryOpen(false)}
+        onConfirm={handleConfirmOrder}
+        onReportDefect={handleReportDefectTransition}
+        data={orderSummaryData}
+      />
+
+      {/* 3. Flag a defect popup */}
+      <FlagDefectPopup
+        isOpen={isFlagDefectOpen}
+        onClose={() => setIsFlagDefectOpen(false)}
+        onSubmit={handleSubmitDefect}
+        defaultPackage={activeShipment ? `${activeShipment.id} · Summit Foods` : 'PKG-9041 · Summit Foods'}
+      />
     </section>
   );
 }
+
+export default ShipmentSequenceSection;
