@@ -9,6 +9,8 @@ public record Order(
         UUID id,
         String orderRef,
         String outletId,
+        String productBrand,
+        String itemDescription,
         LocalDate orderDate,
         Instant placedAt,
         boolean afterCutoff,

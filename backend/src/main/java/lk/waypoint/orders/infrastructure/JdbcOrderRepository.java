@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 import lk.waypoint.orders.domain.Order;
 import lk.waypoint.orders.domain.OrderRepository;
 import lk.waypoint.orders.domain.OrderStatus;
@@ -23,24 +24,41 @@ public class JdbcOrderRepository implements OrderRepository {
     @Override
     public void save(Order order) {
         jdbc.update("""
-                INSERT INTO orders (id, order_ref, outlet_id, order_date, placed_at, after_cutoff,
+                INSERT INTO orders (id, order_ref, outlet_id, product_brand, item_description, order_date, placed_at, after_cutoff,
                   temp_requirement, order_units, order_weight_kg, order_volume_m3, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, order.id(), order.orderRef(), order.outletId(), order.orderDate(), order.placedAt(),
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, order.id(), order.orderRef(), order.outletId(), order.productBrand(), order.itemDescription(),
+                order.orderDate(), order.placedAt(),
                 order.afterCutoff(), order.tempRequirement().name(), order.units(), order.weightKg(),
                 order.volumeM3(), order.status().name());
     }
 
     @Override
     public List<Order> findByOutletAndDate(String outletId, LocalDate orderDate) {
-        return jdbc.query("SELECT id, order_ref, outlet_id, order_date, placed_at, after_cutoff, "
+        return jdbc.query("SELECT id, order_ref, outlet_id, product_brand, item_description, order_date, placed_at, after_cutoff, "
                 + "temp_requirement, order_units, order_weight_kg, order_volume_m3, status "
                 + "FROM orders WHERE outlet_id = ? AND order_date = ? ORDER BY placed_at", this::map, outletId, orderDate);
     }
 
+    @Override
+    public Optional<String> findActiveOutletForUser(String email) {
+        return jdbc.query("SELECT u.outlet_id FROM app_user u JOIN outlet o ON o.id = u.outlet_id "
+                        + "WHERE u.email = ? AND u.active = true AND u.role = 'STORE_MANAGER' AND o.active = true",
+                (row, number) -> row.getString("outlet_id"), email).stream().findFirst();
+    }
+
+    @Override
+    public boolean canUserAccessOutlet(String email, String outletId) {
+        Boolean allowed = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM app_user u "
+                + "JOIN outlet o ON o.depot_id = u.depot_id WHERE u.email = ? AND u.active = true "
+                + "AND u.role = 'DISPATCHER' AND o.id = ? AND o.active = true)", Boolean.class, email, outletId);
+        return Boolean.TRUE.equals(allowed);
+    }
+
     private Order map(ResultSet result, int row) throws SQLException {
         return new Order(result.getObject("id", UUID.class), result.getString("order_ref"),
-                result.getString("outlet_id"), result.getObject("order_date", LocalDate.class),
+                result.getString("outlet_id"), result.getString("product_brand"), result.getString("item_description"),
+                result.getObject("order_date", LocalDate.class),
                 result.getTimestamp("placed_at").toInstant(), result.getBoolean("after_cutoff"),
                 TempRequirement.valueOf(result.getString("temp_requirement")), result.getInt("order_units"),
                 result.getBigDecimal("order_weight_kg"), result.getBigDecimal("order_volume_m3"),

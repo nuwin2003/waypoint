@@ -13,6 +13,8 @@ import lk.waypoint.orders.domain.OrderStatus;
 import lk.waypoint.orders.domain.TempRequirement;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class OrderApplicationService {
@@ -25,11 +27,14 @@ public class OrderApplicationService {
     }
 
     @Transactional
-    public Order place(String outletId, LocalDate requestedDate, TempRequirement temperature,
+    public Order place(String email, String productBrand, String itemDescription, LocalDate requestedDate, TempRequirement temperature,
                        int units, BigDecimal weightKg, BigDecimal volumeM3) {
+        String outletId = repository.findActiveOutletForUser(email).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to an active outlet"));
         OrderCutoffPolicy.Decision decision = OrderCutoffPolicy.decide(requestedDate, clock);
         UUID id = UUID.randomUUID();
         Order order = new Order(id, "WPT-" + id.toString().substring(0, 8).toUpperCase(), outletId,
+                productBrand, itemDescription,
                 decision.effectiveDate(), Instant.now(clock), decision.afterCutoff(), temperature,
                 units, weightKg, volumeM3, decision.afterCutoff() ? OrderStatus.NEXT_RUN : OrderStatus.PLACED);
         repository.save(order);
@@ -38,6 +43,21 @@ public class OrderApplicationService {
 
     @Transactional(readOnly = true)
     public List<Order> list(String outletId, LocalDate orderDate) {
+        return repository.findByOutletAndDate(outletId, orderDate);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Order> listForUser(String email, LocalDate orderDate) {
+        String outletId = repository.findActiveOutletForUser(email).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to an active outlet"));
+        return repository.findByOutletAndDate(outletId, orderDate);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Order> listForDispatcher(String email, String outletId, LocalDate orderDate) {
+        if (!repository.canUserAccessOutlet(email, outletId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this outlet");
+        }
         return repository.findByOutletAndDate(outletId, orderDate);
     }
 }

@@ -15,7 +15,7 @@ export function OrdersDeliveredGauge({ count = 102 }: { count?: number }) {
           <circle cx="85" cy="85" r="70" fill="none" stroke="var(--purple-600)" strokeWidth="16" strokeDasharray="165 220" strokeLinecap="round" />
         </svg>
         <div style={{ position: 'absolute', bottom: 0, textAlign: 'center' }}>
-          <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{count}</span>
+          <span style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{count}</span>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, fontWeight: 600 }}>Deliveries completed</p>
         </div>
       </div>
@@ -40,7 +40,7 @@ export function DeliveryRateCard({ rate = '76.6%' }: { rate?: string }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Delivery rate</span>
-          <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-primary)', marginTop: 4 }}>{rate}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{rate}</div>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>than last week</span>
         </div>
         <select style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border-light)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontWeight: 600 }}>
@@ -86,7 +86,7 @@ export function DeliveryVehiclesCard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--status-good-text)', fontWeight: 700 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#16A34A' }} /> On-route
           </div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>55</div>
         </div>
         <img className="delivery-vehicle-image" src={deliveryVehicleImage} alt="Delivery truck" />
       </div>
@@ -145,3 +145,11 @@ export function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; o
     </div>
   );
 }
+
+export { NotificationCard } from './NotificationCard';
+export type { NotificationItem, NotificationCardProps } from './NotificationCard';
+
+export { ProfileCard } from './ProfileCard';
+export type { ProfileCardProps } from './ProfileCard';
+
+
