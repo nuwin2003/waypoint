@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import logoShortImg from '../../assets/logo-short.png';
 import {
   Menu,
@@ -81,24 +82,36 @@ export function TopBar({
 
       {/* Brand Logo & Sidebar Collapse Toggle */}
       <div className="brand-logo-area">
-        <a className="brand-home-link" href="/" aria-label="Waypoint home">
-          <img className="brand-logo-short" src={logoShortImg} alt="Waypoint logo" />
-          <span className="brand-logo-text">Waypoint</span>
-        </a>
-        <button
-          className="sidebar-toggle"
-          onClick={onToggleSidebarCollapse}
-          type="button"
-          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!sidebarCollapsed}
-          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronLeft className="w-4 h-4" />
-          )}
-        </button>
+        {sidebarCollapsed ? (
+          <button
+            className="collapsed-brand-btn"
+            onClick={onToggleSidebarCollapse}
+            type="button"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <img className="brand-logo-img collapsed-logo" src={logoShortImg} alt="Waypoint logo" />
+            <span className="collapsed-expand-arrow">
+              <ChevronRight className="w-5 h-5" />
+            </span>
+          </button>
+        ) : (
+          <>
+            <Link className="brand-home-link" to="/" aria-label="Waypoint home">
+              <img className="brand-logo-img" src={logoShortImg} alt="Waypoint logo" />
+              <span className="brand-logo-text">Waypoint</span>
+            </Link>
+            <button
+              className="sidebar-toggle"
+              onClick={onToggleSidebarCollapse}
+              type="button"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* User Greeting */}
