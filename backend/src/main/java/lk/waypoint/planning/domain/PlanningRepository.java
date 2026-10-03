@@ -23,5 +23,5 @@ public interface PlanningRepository {
 
     record PlanningOrderSummary(UUID id, String orderRef, String outletName, String brand,
             String depotId, String temperature, java.math.BigDecimal weightKg,
-            java.math.BigDecimal volumeM3, boolean deferredYesterday) { }
+            java.math.BigDecimal volumeM3, boolean deferredYesterday, String status) { }
 }

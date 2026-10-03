@@ -43,17 +43,17 @@ public class JdbcPlanningRepository implements PlanningRepository {
         return jdbc.query("""
                 SELECT o.id, o.order_ref, x.name AS outlet_name, o.product_brand,
                        x.depot_id, o.temp_requirement, o.order_weight_kg,
-                       o.order_volume_m3, o.deferred_yesterday
+                       o.order_volume_m3, o.deferred_yesterday, o.status
                 FROM orders o JOIN outlet x ON x.id = o.outlet_id
                 WHERE x.depot_id = ? AND o.order_date = ?
-                  AND o.status IN ('PLACED', 'NEXT_RUN')
+                  AND o.status IN ('PLACED', 'NEXT_RUN', 'DEFERRED')
                 ORDER BY o.deferred_yesterday DESC, o.placed_at
                 """, (row, number) -> new PlanningOrderSummary(
                 row.getObject("id", UUID.class), row.getString("order_ref"),
                 row.getString("outlet_name"), row.getString("product_brand"),
                 row.getString("depot_id"), row.getString("temp_requirement"),
                 row.getBigDecimal("order_weight_kg"), row.getBigDecimal("order_volume_m3"),
-                row.getBoolean("deferred_yesterday")), depotId, planDate);
+                row.getBoolean("deferred_yesterday"), row.getString("status")), depotId, planDate);
     }
 
     @Override
@@ -68,7 +68,8 @@ public class JdbcPlanningRepository implements PlanningRepository {
                   o.deferred_yesterday, o.days_since_last_served, x.brand, x.district_id,
                   x.parking_constraint, x.dock_type
                 FROM orders o JOIN outlet x ON x.id = o.outlet_id
-                WHERE x.depot_id = ? AND o.order_date = ? AND o.status IN ('PLACED', 'NEXT_RUN')
+                WHERE x.depot_id = ? AND o.order_date = ?
+                  AND o.status IN ('PLACED', 'NEXT_RUN', 'DEFERRED')
                 ORDER BY o.placed_at
                 """, (row, number) -> mapOrder(row), depotId, planDate);
     }

@@ -27,7 +27,7 @@ export function DispatcherDashboardPage() {
       if (!active) return;
       setDepotId(outlets[0]?.depotId ?? '');
       setOrders(allOrders);
-      setRoutes(allOrders.map((order) => {
+      setRoutes(allOrders.filter((order) => !['DEFERRED', 'NEXT_RUN'].includes(order.status.toUpperCase())).map((order) => {
         const outlet = outlets.find((item) => item.id === order.outletId);
         const raw = order.status.toUpperCase();
         const status = /DELIVER|RECEIV/.test(raw) ? 'delivered' : /DEFER|NEXT_RUN/.test(raw) ? 'deferred' : /LOAD|PLAN/.test(raw) ? 'loading' : 'active';

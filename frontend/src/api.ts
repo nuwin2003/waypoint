@@ -97,6 +97,7 @@ export type PlanningContext = {
     weightKg: number;
     volumeM3: number;
     deferredYesterday: boolean;
+    status: string;
   }>;
   vehicles: Vehicle[];
 };
