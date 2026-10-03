@@ -10,6 +10,8 @@ import lk.waypoint.planning.application.PlanRunApplicationService.PlanRunResult;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -28,6 +30,14 @@ public class PlanController {
     @ResponseStatus(HttpStatus.CREATED)
     public PlanRunResult run(@Valid @RequestBody RunPlanRequest request, Authentication authentication) {
         return service.run(request.depotId(), request.planDate(), authentication.getName());
+    }
+
+    @GetMapping("/context")
+    public PlanRunApplicationService.PlanningContext context(
+            @RequestParam String depotId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate planDate,
+            Authentication authentication) {
+        return service.context(depotId, planDate, authentication.getName());
     }
 
     public record RunPlanRequest(@NotBlank String depotId, @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)

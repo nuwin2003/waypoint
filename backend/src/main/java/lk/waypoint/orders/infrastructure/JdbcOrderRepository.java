@@ -60,7 +60,7 @@ public class JdbcOrderRepository implements OrderRepository {
         Boolean allowed = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM app_user u "
                 + "JOIN outlet o ON o.id = ? AND o.active = true "
                 + "WHERE u.email = ? AND u.active = true "
-                + "AND (u.role = 'ADMIN' OR (u.role = 'DISPATCHER' AND u.depot_id = o.depot_id))",
+                + "AND (u.role = 'ADMIN' OR (u.role = 'DISPATCHER' AND u.depot_id = o.depot_id)))",
                 Boolean.class, outletId, email);
         return Boolean.TRUE.equals(allowed);
     }

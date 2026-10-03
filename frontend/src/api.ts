@@ -19,6 +19,8 @@ export type Vehicle = {
   status: string;
   weightCapKg: number;
   volumeCapM3: number;
+  weeklyFuelQuotaL?: number;
+  kmPerL?: number;
 };
 
 export type Order = {
@@ -43,6 +45,7 @@ export type PlanRunResult = {
   tripCount: number;
   deferralCount: number;
   deferrals: Array<{ orderId: string; reasonCode: string; priorityScore: number }>;
+  trips?: Array<{ vehicleId: string; tripNo: number; orderIds: string[] }>;
 };
 
 export type LoginResponse = {
@@ -81,6 +84,21 @@ export type AdminOverview = {
   trend: Array<{ date: string; onTimePercent: number }>;
   depotPerformance: Array<{ label: string; completed: number; planned: number }>;
   brandPerformance: Array<{ label: string; completed: number; planned: number }>;
+};
+
+export type PlanningContext = {
+  orders: Array<{
+    id: string;
+    orderRef: string;
+    outletName: string;
+    brand: ProductBrandCode;
+    depotId: string;
+    temperature: TempRequirement;
+    weightKg: number;
+    volumeM3: number;
+    deferredYesterday: boolean;
+  }>;
+  vehicles: Vehicle[];
 };
 
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
@@ -196,4 +214,5 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ depotId, planDate }),
   }),
+  planningContext: (depotId: string, planDate: string) => request<PlanningContext>(`/plans/context${queryString({ depotId, planDate })}`),
 };
