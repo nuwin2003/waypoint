@@ -4,24 +4,32 @@ import {
   Truck, Check, CheckCheck, QrCode, ChevronRight, Camera, Plus, X, ClipboardList, Box,
 } from 'lucide-react';
 import { useModal } from '../DriverModals';
-import {
-  STOPS, CURRENT_STOP_INDEX, PACKAGES, TRIP_ID, type DeliveryOutcome,
-} from '../data/driverData';
+import { useDriverData } from '../DriverDataContext';
+import { api } from '../../../api';
 
 interface PhotoState { url: string; name: string }
+type DeliveryOutcome = 'Delivered' | 'Partial delivery' | 'Unable to deliver';
 
 export function DeliveryPage() {
   const setModal = useModal();
-  const stop = STOPS[CURRENT_STOP_INDEX];
-  const total = PACKAGES.length;
+  const { route, routeLoading, routeError, refreshRoute } = useDriverData();
+  const stop = route?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status))
+    ?? route?.stops[0];
+  const total = stop?.packages ?? 0;
 
-  const [checked, setChecked] = useState<boolean[]>(() => PACKAGES.map((_, i) => i === 0));
+  const [checked, setChecked] = useState<boolean[]>([]);
   const [outcome, setOutcome] = useState<DeliveryOutcome>('Delivered');
   const [receiver, setReceiver] = useState('');
   const [photo, setPhoto] = useState<PhotoState | null>(null);
   const [photoError, setPhotoError] = useState('');
   const [completed, setCompleted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setChecked(Array.from({ length: total }, (_, i) => i === 0));
+  }, [total, stop?.stopId]);
 
   const checkedCount = checked.filter(Boolean).length;
 
@@ -31,12 +39,12 @@ export function DeliveryPage() {
     setChecked((prev) => prev.map((v, i) => (i === index ? !v : v)));
   };
 
-  const selectAll = () => setChecked(PACKAGES.map(() => true));
+  const selectAll = () => setChecked(Array.from({ length: total }, () => true));
 
   const changeOutcome = (next: DeliveryOutcome) => {
     setOutcome(next);
-    if (next === 'Delivered') setChecked(PACKAGES.map(() => true));
-    else if (next === 'Unable to deliver') setChecked(PACKAGES.map(() => false));
+    if (next === 'Delivered') setChecked(Array.from({ length: total }, () => true));
+    else if (next === 'Unable to deliver') setChecked(Array.from({ length: total }, () => false));
   };
 
   const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,12 +74,38 @@ export function DeliveryPage() {
   else if (outcome === 'Partial delivery' && (checkedCount === 0 || checkedCount === total)) helper = 'Select the packages you handed over (not all of them).';
   else if (needsReceiver && receiver.trim() === '') helper = 'Enter the receiver\u2019s name to continue.';
 
+  const complete = async () => {
+    if (!stop) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await api.driverSubmitProofOfDelivery(stop.stopId, {
+        receiverName: receiver.trim() || undefined,
+        outcome: outcome === 'Delivered' ? 'DELIVERED' : outcome === 'Partial delivery' ? 'PARTIAL_DELIVERY' : 'UNABLE_TO_DELIVER',
+        deliveredUnits: checkedCount,
+        shortUnits: total - checkedCount,
+        photoReference: photo?.name,
+        eventTime: new Date().toISOString(),
+      });
+      setCompleted(true);
+      await refreshRoute();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this delivery.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (routeLoading) return <p className="dv-panel-help">Loading delivery details…</p>;
+  if (routeError) return <div className="dv-panel" role="alert"><p>{routeError}</p><button className="dv-secondary-button" type="button" onClick={() => void refreshRoute()}>Try again</button></div>;
+  if (!route || !stop) return <p className="dv-empty">No delivery stop is assigned.</p>;
+
   if (completed) {
     return (
       <div className="dv-success-card">
         <span className="dv-success-icon"><CheckCheck size={30} aria-hidden /></span>
         <h2 className="dv-success-title">{outcome === 'Unable to deliver' ? 'Stop recorded' : 'Delivery complete'}</h2>
-        <p className="dv-success-sub">{stop.name} · Stop {stop.position} of {STOPS.length}</p>
+        <p className="dv-success-sub">{stop.outletName} · Stop {stop.sequence} of {route.totalStops}</p>
         <dl className="dv-success-list">
           <div><dt>Outcome</dt><dd>{outcome}</dd></div>
           <div><dt>Packages</dt><dd>{checkedCount} / {total}</dd></div>
@@ -86,7 +120,7 @@ export function DeliveryPage() {
 
   return (
     <>
-      <p className="dv-eyebrow">STOP {stop.position} OF {STOPS.length} · {TRIP_ID}</p>
+      <p className="dv-eyebrow">STOP {stop.sequence} OF {route.totalStops} · {route.routeLabel}</p>
       <h1 className="dv-title">Confirm delivery</h1>
       <p className="dv-subhead">Check the store. Hand over. You're done.</p>
 
@@ -95,8 +129,8 @@ export function DeliveryPage() {
           <span className="dv-step-pill">CURRENT STOP</span>
           <span className="dv-status-green"><Check size={14} aria-hidden /> Arrived</span>
         </div>
-        <div className="dv-stop-name">{stop.name}</div>
-        <div className="dv-stop-address">{stop.address}</div>
+        <div className="dv-stop-name">{stop.outletName}</div>
+        <div className="dv-stop-address">{stop.districtName}</div>
         <div className="dv-stop-divider" />
         <div className="dv-stop-access"><Truck size={20} aria-hidden /> {stop.access}</div>
       </section>
@@ -108,9 +142,9 @@ export function DeliveryPage() {
         </div>
         <p className="dv-panel-help">Select each package as you hand it over.</p>
         <div className="dv-handoff-list">
-          {PACKAGES.map((id, i) => (
+          {checked.map((isChecked, i) => (
             <button
-              key={id}
+              key={`${stop.orderRef}-${i}`}
               type="button"
               className="dv-handoff-row"
               aria-pressed={checked[i]}
@@ -119,8 +153,8 @@ export function DeliveryPage() {
               <span className={`dv-checkbox${checked[i] ? ' checked' : ''}`}>{checked[i] && <Check size={15} aria-hidden />}</span>
               <Box size={20} aria-hidden className="dv-handoff-box" />
               <span className="dv-handoff-text">
-                <strong>{id}</strong>
-                <small>{stop.category} · {stop.name}</small>
+                <strong>{stop.orderRef} · Package {i + 1}</strong>
+                <small>{stop.category} · {stop.outletName}</small>
               </span>
               {checked[i] && <Check size={20} aria-hidden className="dv-handoff-done" />}
             </button>
@@ -136,7 +170,7 @@ export function DeliveryPage() {
 
         <div className="dv-arrival-row">
           <span className="dv-arrival-icon"><Check size={18} aria-hidden /></span>
-          <div><strong>Arrival recorded</strong><small>Manual check-in · demo location</small></div>
+          <div><strong>Arrival recorded</strong><small>Recorded by Driver API</small></div>
         </div>
 
         <button type="button" className="dv-verify-row" onClick={() => setModal('verify')}>
@@ -191,9 +225,10 @@ export function DeliveryPage() {
         )}
         {photoError && <p className="dv-photo-error" role="alert">{photoError}</p>}
 
-        <button type="button" className="dv-primary-button" disabled={!canComplete} onClick={() => setCompleted(true)}>
+        <button type="button" className="dv-primary-button" disabled={!canComplete || saving} onClick={() => void complete()}>
           <CheckCheck size={18} aria-hidden /> Complete delivery
         </button>
+        {saveError && <p className="dv-photo-error" role="alert">{saveError}</p>}
         <p className="dv-complete-helper">{helper}</p>
       </section>
 

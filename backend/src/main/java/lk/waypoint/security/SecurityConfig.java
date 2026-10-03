@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/outlets", "/api/v1/vehicles/**")
                             .hasAnyRole("DISPATCHER", "LOADER", "ADMIN")
                         .requestMatchers("/api/v1/loading/**").hasRole("LOADER")
+                        .requestMatchers("/api/v1/driver/**").hasRole("DRIVER")
                         .anyRequest().authenticated()).addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
 

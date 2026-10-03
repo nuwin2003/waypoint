@@ -1,4 +1,4 @@
-import { DEPOT_POINT, STOPS, distanceMeters, type DriverStop } from './data/driverData';
+import { DEPOT_POINT, distanceMeters, type DriverStop } from './data/driverData';
 import type { MapPoint } from './components/DvMap';
 
 export interface RouteStep {
@@ -215,7 +215,7 @@ export interface DrivingRouteLoad {
 }
 
 /** Road route and every turn, from the depot through the remaining stops. */
-export async function loadDrivingRoute(origin: MapPoint = DEPOT_POINT, stops: DriverStop[] = STOPS): Promise<DrivingRouteLoad> {
+export async function loadDrivingRoute(origin: MapPoint = DEPOT_POINT, stops: DriverStop[] = []): Promise<DrivingRouteLoad> {
   const fallback = fallbackRoute(origin, stops);
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
   const destination = stops[stops.length - 1];

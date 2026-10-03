@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import {
   X, MapPin, Wrench, CircleHelp, Zap, Route as RouteIcon, Box, ScanLine, Check,
 } from 'lucide-react';
-import { STOPS, CURRENT_STOP_INDEX, TRIP_ID, VEHICLE } from './data/driverData';
+import { api } from '../../api';
+import { useDriverData } from './DriverDataContext';
 
 export type DriverModal = 'incident' | 'fine' | 'verify' | null;
 
@@ -23,8 +24,26 @@ const INCIDENT_TYPES: { label: string; icon: typeof Wrench }[] = [
 ];
 
 function IncidentModal({ onClose }: { onClose: () => void }) {
+  const { route, refreshRoute } = useDriverData();
   const [type, setType] = useState<string | null>(null);
-  const stop = STOPS[CURRENT_STOP_INDEX];
+  const [details, setDetails] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const stop = route?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status)) ?? route?.stops[0];
+  const save = async () => {
+    if (!type) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.driverCreateIncidentReport({ stopId: stop?.stopId, type, notes: details || undefined });
+      await refreshRoute();
+      onClose();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save the incident report.');
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div className="dv-modal" role="document">
       <button className="dv-modal-close" onClick={onClose} aria-label="Close" type="button">
@@ -35,8 +54,8 @@ function IncidentModal({ onClose }: { onClose: () => void }) {
       <div className="dv-incident-context">
         <MapPin size={22} aria-hidden />
         <div>
-          <strong>{TRIP_ID} · Vehicle {VEHICLE}</strong>
-          <span>{stop.name} · Stop {stop.position} of {STOPS.length}</span>
+          <strong>{route?.routeLabel ?? 'Current route'} · Vehicle {route?.vehicleId ?? '—'}</strong>
+          <span>{stop?.outletName ?? 'No active stop'} · Stop {stop?.sequence ?? '—'} of {route?.totalStops ?? '—'}</span>
         </div>
       </div>
 
@@ -66,22 +85,51 @@ function IncidentModal({ onClose }: { onClose: () => void }) {
         id="dv-incident-details"
         className="dv-textarea"
         placeholder="What happened? Are you in a safe location?"
+        value={details}
+        onChange={(event) => setDetails(event.target.value)}
       />
 
       <button
         className={`dv-danger-button${type ? '' : ' disabled'}`}
         type="button"
         disabled={!type}
-        onClick={onClose}
+        onClick={() => void save()}
       >
-        {type ? 'Save incident report' : 'Select an incident type'}
+        {saving ? 'Saving…' : type ? 'Save incident report' : 'Select an incident type'}
       </button>
+      {error && <p className="dv-photo-error" role="alert">{error}</p>}
     </div>
   );
 }
 
 function FineModal({ onClose }: { onClose: () => void }) {
-  const stop = STOPS[CURRENT_STOP_INDEX];
+  const { route, refreshRoute } = useDriverData();
+  const stop = route?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status)) ?? route?.stops[0];
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [ticketReference, setTicketReference] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    const numericAmount = Number(amount);
+    if (!stop || !Number.isFinite(numericAmount) || numericAmount <= 0 || !reason.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.driverCreateFineReport({
+        stopId: stop.stopId,
+        amount: numericAmount,
+        reason: reason.trim(),
+        ticketReference: ticketReference.trim() || undefined,
+      });
+      await refreshRoute();
+      onClose();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save the fine report.');
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div className="dv-modal" role="document">
       <button className="dv-modal-close" onClick={onClose} aria-label="Close" type="button">
@@ -93,27 +141,29 @@ function FineModal({ onClose }: { onClose: () => void }) {
       <div className="dv-fine-context">
         <MapPin size={22} aria-hidden />
         <div>
-          <strong>{stop.name}</strong>
-          <span>{stop.access}</span>
+          <strong>{stop?.outletName ?? 'Current stop'}</strong>
+          <span>{stop?.access ?? 'No stop context available'}</span>
         </div>
       </div>
 
       <label className="dv-field-label" htmlFor="dv-fine-amount">Fine amount (LKR)</label>
-      <input id="dv-fine-amount" className="dv-input" type="text" inputMode="numeric" placeholder="e.g. 1500" />
+      <input id="dv-fine-amount" className="dv-input" type="text" inputMode="numeric" placeholder="e.g. 1500" value={amount} onChange={(event) => setAmount(event.target.value)} />
 
       <label className="dv-field-label" htmlFor="dv-fine-reason">Reason</label>
-      <textarea id="dv-fine-reason" className="dv-textarea" placeholder="Explain the unloading or parking situation" />
+      <textarea id="dv-fine-reason" className="dv-textarea" placeholder="Explain the unloading or parking situation" value={reason} onChange={(event) => setReason(event.target.value)} />
 
       <label className="dv-field-label" htmlFor="dv-fine-photo">Ticket photo</label>
-      <input id="dv-fine-photo" className="dv-input" type="text" />
+      <input id="dv-fine-photo" className="dv-input" type="text" value={ticketReference} onChange={(event) => setTicketReference(event.target.value)} placeholder="Ticket reference" />
 
-      <button className="dv-primary-button" type="button" onClick={onClose}>Save record</button>
+      <button className="dv-primary-button" type="button" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save record'}</button>
+      {error && <p className="dv-photo-error" role="alert">{error}</p>}
     </div>
   );
 }
 
 function VerifyModal({ onClose }: { onClose: () => void }) {
-  const stop = STOPS[CURRENT_STOP_INDEX];
+  const { route } = useDriverData();
+  const stop = route?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status)) ?? route?.stops[0];
   return (
     <div className="dv-modal" role="document">
       <button className="dv-modal-close" onClick={onClose} aria-label="Close" type="button">
@@ -124,9 +174,9 @@ function VerifyModal({ onClose }: { onClose: () => void }) {
 
       <div className="dv-verify-body">
         <ScanLine size={72} aria-hidden />
-        <div className="dv-verify-name">{stop.name}</div>
-        <div className="dv-verify-code">STORE · WP-001</div>
-        <span className="dv-sample-badge">Sample code</span>
+        <div className="dv-verify-name">{stop?.outletName ?? 'No active stop'}</div>
+        <div className="dv-verify-code">ORDER · {stop?.orderRef ?? '—'}</div>
+        <span className="dv-sample-badge">Live route record</span>
       </div>
 
       <button className="dv-primary-button" type="button" onClick={onClose}>Verify sample store</button>

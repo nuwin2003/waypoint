@@ -4,7 +4,7 @@ import { House, Route as RouteIcon, Box, History, Moon, Sun } from 'lucide-react
 import { useAuth } from '../../app/auth/AuthContext';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { DriverModalProvider } from './DriverModals';
-import { DRIVER_INITIALS } from './data/driverData';
+import { DriverDataProvider } from './DriverDataContext';
 import logo from '../../assets/logo-short.png';
 import './driver.css';
 
@@ -54,12 +54,13 @@ export function DriverWorkspace() {
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
-    : DRIVER_INITIALS;
+    : 'DR';
 
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
   const shell = (
-    <DriverModalProvider>
-      <div className={`dv-app${immersive ? ' dv-app-immersive' : ''}`}>
+    <DriverDataProvider>
+      <DriverModalProvider>
+        <div className={`dv-app${immersive ? ' dv-app-immersive' : ''}`}>
         {!immersive && (
           <header className="dv-topbar">
             <div className="dv-brand">
@@ -106,8 +107,9 @@ export function DriverWorkspace() {
             ))}
           </nav>
         )}
-      </div>
-    </DriverModalProvider>
+        </div>
+      </DriverModalProvider>
+    </DriverDataProvider>
   );
 
   if (!mapsKey) return shell;

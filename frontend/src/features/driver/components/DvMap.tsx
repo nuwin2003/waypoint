@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Map, Marker, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import { DEPOT_POINT, STOPS } from '../data/driverData';
+import { DEPOT_POINT } from '../data/driverData';
 
 export interface MapPoint {
   lat: number;
   lng: number;
 }
 
+export interface MapStop extends MapPoint {
+  position: number;
+  name: string;
+}
+
 interface DvMapProps {
   activeIndex: number;
+  stops?: MapStop[];
   /** Extra class for height/variant. */
   className?: string;
   status?: string;
@@ -63,7 +69,7 @@ function drawRouteLine(map: google.maps.Map, path: MapPoint[], dark: boolean) {
   };
 }
 
-function DrivingRoute({ routePath, dark }: { routePath?: MapPoint[] | null; dark: boolean }) {
+function DrivingRoute({ routePath, stops, dark }: { routePath?: MapPoint[] | null; stops: MapStop[]; dark: boolean }) {
   const map = useMap();
   const routes = useMapsLibrary('routes');
 
@@ -74,18 +80,19 @@ function DrivingRoute({ routePath, dark }: { routePath?: MapPoint[] | null; dark
     }
     if (!routes) return;
 
-    const path = [DEPOT_POINT, ...STOPS.map((stop) => ({ lat: stop.lat, lng: stop.lng }))];
+    const path = [DEPOT_POINT, ...stops];
     const clearFallback = drawRouteLine(map, path, dark);
 
     let cancelled = false;
     let renderer: google.maps.DirectionsRenderer | null = null;
-    const last = STOPS[STOPS.length - 1];
+    const last = stops[stops.length - 1];
+    if (!last) return;
     const service = new routes.DirectionsService();
     service.route(
       {
         origin: DEPOT_POINT,
         destination: { lat: last.lat, lng: last.lng },
-        waypoints: STOPS.slice(0, -1).map((stop) => ({
+        waypoints: stops.slice(0, -1).map((stop) => ({
           location: { lat: stop.lat, lng: stop.lng },
           stopover: true,
         })),
@@ -113,7 +120,7 @@ function DrivingRoute({ routePath, dark }: { routePath?: MapPoint[] | null; dark
       renderer?.setMap(null);
       clearFallback();
     };
-  }, [map, routes, routePath, dark]);
+  }, [map, routes, routePath, stops, dark]);
 
   return null;
 }
@@ -190,9 +197,10 @@ function Camera({
 }
 
 function GoogleMap({
-  activeIndex, showDriver, interactive, dark, driver, camera, frameKey, routePath, onUserPan,
+  activeIndex, stops, showDriver, interactive, dark, driver, camera, frameKey, routePath, onUserPan,
 }: {
   activeIndex: number;
+  stops: MapStop[];
   showDriver: boolean;
   interactive: boolean;
   dark: boolean;
@@ -203,7 +211,7 @@ function GoogleMap({
   onUserPan?: () => void;
 }) {
   const origin = driver ?? DEPOT_POINT;
-  const target = STOPS[activeIndex] ?? STOPS[0];
+  const target = stops[activeIndex] ?? stops[0] ?? DEPOT_POINT;
 
   return (
     <Map
@@ -217,7 +225,7 @@ function GoogleMap({
       colorScheme={dark ? 'DARK' : 'LIGHT'}
       reuseMaps
     >
-      <DrivingRoute routePath={routePath} dark={dark} />
+      <DrivingRoute routePath={routePath} stops={stops} dark={dark} />
       <Camera
         camera={camera}
         origin={origin}
@@ -227,7 +235,7 @@ function GoogleMap({
         onUserPan={onUserPan}
       />
       {!driver && <Marker position={DEPOT_POINT} title="Peliyagoda depot" />}
-      {STOPS.map((stop, index) => (
+      {stops.map((stop, index) => (
         <Marker
           key={stop.position}
           position={{ lat: stop.lat, lng: stop.lng }}
@@ -245,7 +253,7 @@ function GoogleMap({
 }
 
 export function DvMap({
-  activeIndex, className = '', status, showDriver = false, interactive = false,
+  activeIndex, stops = [], className = '', status, showDriver = false, interactive = false,
   driver = null, camera = 'fit', frameKey = 'route', routePath = null, onUserPan,
 }: DvMapProps) {
   const dark = useDarkMap();
@@ -254,6 +262,7 @@ export function DvMap({
     <div className={`dv-map ${className}`} role="img" aria-label="Route map">
       <GoogleMap
         activeIndex={activeIndex}
+        stops={stops}
         showDriver={showDriver}
         interactive={interactive}
         dark={dark}

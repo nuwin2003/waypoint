@@ -1,19 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { Globe, HelpCircle, LogOut } from 'lucide-react';
 import { useAuth } from '../../../app/auth/AuthContext';
-import { DEPOT, DRIVER_INITIALS, DRIVER_NAME } from '../data/driverData';
 
 export function DriverProfilePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const name = user?.displayName || DRIVER_NAME;
+  const name = user?.displayName || 'Driver';
   const initials = name
     .split(' ')
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase() || DRIVER_INITIALS;
+    .toUpperCase() || 'DR';
 
   const signOut = () => {
     logout();
@@ -55,7 +54,7 @@ export function DriverProfilePage() {
             <HelpCircle size={18} aria-hidden />
             <span className="dv-profile-row-text">
               Help center
-              <small>Call the {DEPOT} depot desk if you can&apos;t sign in or a stop can&apos;t be completed.</small>
+              <small>Call the depot desk if you can&apos;t sign in or a stop can&apos;t be completed.</small>
             </span>
           </div>
         </div>

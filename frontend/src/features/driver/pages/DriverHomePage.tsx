@@ -4,24 +4,36 @@ import {
 } from 'lucide-react';
 import { useNow } from '../useNow';
 import { useModal } from '../DriverModals';
-import {
-  ROUTE_ID, DEPOT, DESTINATION, DRIVER_NAME, STOPS, CURRENT_STOP_INDEX,
-  TOTAL_PACKAGES, PLANNED_DISTANCE_KM, FIRST_DELIVERY,
-  greeting, formatLongDate, formatClock, addMinutes,
-} from '../data/driverData';
+import { useDriverData } from '../DriverDataContext';
+import { useAuth } from '../../../app/auth/AuthContext';
+import { greeting, formatLongDate, formatClock, addMinutes } from '../data/driverData';
 
 export function DriverHomePage() {
   const now = useNow();
   const setModal = useModal();
-  const stop = STOPS[CURRENT_STOP_INDEX];
-  const eta = formatClock(addMinutes(now, stop.driveMin));
+  const { user } = useAuth();
+  const { route, routeLoading, routeError, refreshRoute } = useDriverData();
+  const stop = route?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status))
+    ?? route?.stops[0];
+  const eta = stop ? formatClock(addMinutes(now, stop.driveMinutes)) : null;
+  const totalPackages = route?.stops.reduce((sum, item) => sum + item.packages, 0) ?? 0;
 
   return (
     <>
       <p className="dv-eyebrow">{formatLongDate(now).toUpperCase()}</p>
-      <h1 className="dv-title">{greeting(now)}, {DRIVER_NAME}<span className="dv-accent">.</span></h1>
+      <h1 className="dv-title">{greeting(now)}, {user?.displayName ?? 'Driver'}<span className="dv-accent">.</span></h1>
       <p className="dv-subhead">Let's make every stop count.</p>
 
+      {routeLoading && <p className="dv-panel-help">Loading your route…</p>}
+      {routeError && (
+        <div className="dv-panel" role="alert">
+          <p>{routeError}</p>
+          <button className="dv-secondary-button" type="button" onClick={() => void refreshRoute()}>Try again</button>
+        </div>
+      )}
+
+      {route && (
+        <>
       <section className="dv-route-card">
         <div className="dv-route-card-head">
           <span className="dv-route-eyebrow"><Layers size={16} aria-hidden /> TODAY'S ROUTE</span>
@@ -29,26 +41,26 @@ export function DriverHomePage() {
         </div>
 
         <div className="dv-route-id">
-          {ROUTE_ID}<span className="dv-route-leg"> {DEPOT} → {DESTINATION}</span>
+          {route.routeLabel}<span className="dv-route-leg"> {route.depotName} → {route.districtName}</span>
         </div>
 
         <div className="dv-route-stats">
           <div className="dv-route-stat">
-            <span className="dv-route-stat-val">{STOPS.length.toString().padStart(2, '0')}</span>
+            <span className="dv-route-stat-val">{route.totalStops.toString().padStart(2, '0')}</span>
             <span className="dv-route-stat-cap">delivery stops</span>
           </div>
           <div className="dv-route-stat">
-            <span className="dv-route-stat-val">{TOTAL_PACKAGES}</span>
+            <span className="dv-route-stat-val">{totalPackages}</span>
             <span className="dv-route-stat-cap">packages</span>
           </div>
           <div className="dv-route-stat">
-            <span className="dv-route-stat-val">{PLANNED_DISTANCE_KM.toFixed(1)}<small>km</small></span>
+            <span className="dv-route-stat-val">{route.plannedDistanceKm.toFixed(1)}<small>km</small></span>
             <span className="dv-route-stat-cap">planned distance</span>
           </div>
         </div>
 
         <div className="dv-route-foot">
-          <Clock size={14} aria-hidden /> First delivery {FIRST_DELIVERY}
+          <Clock size={14} aria-hidden /> First delivery {route.firstWindow ?? 'not scheduled'}
         </div>
       </section>
 
@@ -63,20 +75,20 @@ export function DriverHomePage() {
         </button>
       </div>
 
-      <section className="dv-panel dv-next-stop">
+      {stop && <section className="dv-panel dv-next-stop">
         <div className="dv-panel-head">
           <h2>Your next stop</h2>
-          <span className="dv-step-pill">{stop.position} / {STOPS.length}</span>
+          <span className="dv-step-pill">{stop.sequence} / {route.totalStops}</span>
         </div>
 
         <div className="dv-next-stop-main">
           <div>
-            <div className="dv-stop-name">{stop.name}</div>
-            <div className="dv-stop-address">{stop.address}</div>
+            <div className="dv-stop-name">{stop.outletName}</div>
+            <div className="dv-stop-address">{stop.districtName}</div>
           </div>
           <div className="dv-eta">
-            <span className="dv-eta-time">{eta.replace(/ (AM|PM)$/, '')}</span>
-            <span className="dv-eta-cap">{eta.endsWith('PM') ? 'PM' : 'AM'} · ETA</span>
+            <span className="dv-eta-time">{eta?.replace(/ (AM|PM)$/, '')}</span>
+            <span className="dv-eta-cap">{eta?.endsWith('PM') ? 'PM' : 'AM'} · ETA</span>
           </div>
         </div>
 
@@ -89,7 +101,9 @@ export function DriverHomePage() {
         <Link to="/drive/route/map" className="dv-primary-button">
           Start journey <ArrowRight size={18} aria-hidden />
         </Link>
-      </section>
+      </section>}
+        </>
+      )}
     </>
   );
 }

@@ -8,12 +8,11 @@ import {
 import { useNow } from '../useNow';
 import { useModal } from '../DriverModals';
 import { DvMap } from '../components/DvMap';
+import { useDriverData } from '../DriverDataContext';
+import { api } from '../../../api';
 import { useGeolocation } from '../useGeolocation';
 import { loadDrivingRoute, type DrivingRouteResult, type RouteStep } from '../drivingRoute';
-import {
-  STOPS, CURRENT_STOP_INDEX, DEPOT_POINT, formatClock, addMinutes,
-  distanceMeters, formatDistance,
-} from '../data/driverData';
+import { DEPOT_POINT, formatClock, addMinutes, distanceMeters, formatDistance, type DriverStop } from '../data/driverData';
 
 const ARRIVED_M = 60;
 
@@ -45,39 +44,68 @@ function speak(text: string) {
 export function NavigationPage() {
   const now = useNow();
   const setModal = useModal();
+  const { route: todayRoute, routeLoading: driverRouteLoading, routeError, refreshRoute } = useDriverData();
   const { fix, status } = useGeolocation();
   const [navigating, setNavigating] = useState(false);
   const [following, setFollowing] = useState(true);
   const [muted, setMuted] = useState(false);
-  const [route, setRoute] = useState<DrivingRouteResult | null>(null);
+  const [drivingRoute, setDrivingRoute] = useState<DrivingRouteResult | null>(null);
   const [routeWarning, setRouteWarning] = useState<string | null>(null);
   const [routeLoading, setRouteLoading] = useState(true);
+
+  const stop = todayRoute?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status))
+    ?? todayRoute?.stops[0];
+  const mapStops = (todayRoute?.stops ?? []).flatMap((item) => (
+    item.latitude === null || item.longitude === null
+      ? []
+      : [{ lat: item.latitude, lng: item.longitude, position: item.sequence, name: item.outletName }]
+  ));
+  const routeStops: DriverStop[] = (todayRoute?.stops ?? []).flatMap((item) => (
+    item.latitude === null || item.longitude === null
+      ? []
+      : [{
+          position: item.sequence,
+          name: item.outletName,
+          address: item.address ?? item.districtName,
+          packages: item.packages,
+          category: item.category,
+          window: item.window,
+          access: item.access,
+          distanceKm: item.distanceKm,
+          driveMin: item.driveMinutes,
+          lat: item.latitude,
+          lng: item.longitude,
+        }]
+  ));
+  const activeIndex = Math.max(0, routeStops.findIndex((item) => item.position === stop?.sequence));
 
   const fixRef = useRef(fix);
   fixRef.current = fix;
   const hasFix = fix !== null;
   useEffect(() => {
     let cancelled = false;
-    void loadDrivingRoute(fixRef.current ?? DEPOT_POINT, STOPS).then((result) => {
+    void loadDrivingRoute(fixRef.current ?? DEPOT_POINT, routeStops).then((result) => {
       if (cancelled) return;
-      setRoute(result.route);
+      setDrivingRoute(result.route);
       setRouteWarning(result.warning);
       setRouteLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [hasFix]);
+  }, [hasFix, todayRoute?.routeId]);
 
-  const stop = STOPS[CURRENT_STOP_INDEX];
   const origin = fix ?? DEPOT_POINT;
-  const steps = route?.steps ?? [];
+  const steps = drivingRoute?.steps ?? [];
   const currentStep: RouteStep | undefined = steps[0];
   const followingStep = steps[1];
-  const toStop = distanceMeters(origin, stop);
-  const meters = route?.distanceMeters ?? toStop;
-  const driveMinutes = route
-    ? Math.max(1, Math.round(route.durationSeconds / 60))
+  const stopPoint = stop && stop.latitude !== null && stop.longitude !== null
+    ? { lat: stop.latitude, lng: stop.longitude }
+    : origin;
+  const toStop = distanceMeters(origin, stopPoint);
+  const meters = drivingRoute?.distanceMeters ?? toStop;
+  const driveMinutes = drivingRoute
+    ? Math.max(1, Math.round(drivingRoute.durationSeconds / 60))
     : Math.max(1, Math.round(toStop / 500));
   const arrived = toStop <= ARRIVED_M;
   const eta = formatClock(addMinutes(now, driveMinutes));
@@ -95,7 +123,8 @@ export function NavigationPage() {
   const start = () => {
     setNavigating(true);
     setFollowing(true);
-    if (!muted) speak(`Starting navigation to ${stop.name}`);
+    if (todayRoute?.routeId) void api.driverStartRoute(todayRoute.routeId);
+    if (!muted && stop) speak(`Starting navigation to ${stop.outletName}`);
   };
 
   const end = () => {
@@ -103,6 +132,10 @@ export function NavigationPage() {
     setFollowing(true);
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   };
+
+  if (driverRouteLoading) return <p className="dv-panel-help">Loading navigation details…</p>;
+  if (routeError) return <div className="dv-panel" role="alert"><p>{routeError}</p><button className="dv-secondary-button" type="button" onClick={() => void refreshRoute()}>Try again</button></div>;
+  if (!todayRoute || !stop) return <p className="dv-empty">No delivery stop is assigned.</p>;
 
   return (
     <div className="dv-nav">
@@ -112,7 +145,7 @@ export function NavigationPage() {
             <ArrowLeft size={20} aria-hidden />
           </Link>
           <span className="dv-nav-title">Navigation</span>
-          <span className="dv-nav-step">Stop {stop.position} of {STOPS.length}</span>
+          <span className="dv-nav-step">Stop {stop.sequence} of {todayRoute.totalStops}</span>
         </div>
       )}
 
@@ -128,10 +161,10 @@ export function NavigationPage() {
           </strong>
           <span>
             {arrived
-              ? stop.name
+              ? stop.outletName
               : routeLoading
-                ? stop.address
-                : currentStep?.instruction ?? routeWarning ?? `Head toward ${stop.name}`}
+                ? stop.address ?? stop.districtName
+                : currentStep?.instruction ?? routeWarning ?? `Head toward ${stop.outletName}`}
           </span>
           {navigating && !arrived && followingStep && (
             <span className="dv-nav-turn-then">
@@ -143,14 +176,15 @@ export function NavigationPage() {
 
       <div className="dv-nav-map">
         <DvMap
-          activeIndex={CURRENT_STOP_INDEX}
+          activeIndex={activeIndex}
+          stops={mapStops}
           className="dv-map-full"
           showDriver
           interactive
           driver={fix}
           camera={navigating && following && fix ? 'follow' : 'fit'}
-          frameKey={`${navigating ? 'navigating' : 'preview'}-${route?.path.length ?? 0}`}
-          routePath={route?.path}
+          frameKey={`${navigating ? 'navigating' : 'preview'}-${drivingRoute?.path.length ?? 0}`}
+          routePath={drivingRoute?.path}
           onUserPan={navigating ? () => setFollowing(false) : undefined}
         />
         <span className="dv-nav-gps">{gpsLabel}</span>
@@ -183,15 +217,15 @@ export function NavigationPage() {
       <div className="dv-nav-card">
         {!navigating && (
           <div className="dv-nav-card-label">
-            <span className="dv-step-pill">STOP {stop.position} · {stop.category.toUpperCase()}</span>
+            <span className="dv-step-pill">STOP {stop.sequence} · {stop.category.toUpperCase()}</span>
             <span className="dv-nav-away">{formatDistance(toStop)} away</span>
           </div>
         )}
 
         <div className="dv-nav-card-main">
           <div>
-            <div className="dv-stop-name">{stop.name}</div>
-            <div className="dv-stop-address">{stop.address}</div>
+            <div className="dv-stop-name">{stop.outletName}</div>
+            <div className="dv-stop-address">{stop.address ?? stop.districtName}</div>
           </div>
           <div className="dv-eta">
             <span className="dv-eta-time">{eta.replace(/ (AM|PM)$/, '')}</span>

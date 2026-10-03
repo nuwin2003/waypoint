@@ -3,21 +3,21 @@ import {
   SlidersHorizontal, Route as RouteIcon, Clock, Navigation, Package, Truck,
   ChevronDown, Check, ClipboardList, UploadCloud,
 } from 'lucide-react';
-import { useNow } from '../useNow';
-import {
-  TRIPS, tripsForPeriod, daysAgoDate, formatDayMonth, formatShortDate,
-  type HistoryPeriod, type Trip,
-} from '../data/driverData';
+import { useDriverData } from '../DriverDataContext';
 
-const PERIODS: { key: HistoryPeriod; label: string }[] = [
-  { key: '7d', label: 'Last 7 days' },
-  { key: '30d', label: 'Last 30 days' },
-  { key: 'all', label: 'All time' },
+type HistoryPeriod = '7d' | '30d' | 'all';
+const PERIODS: { key: HistoryPeriod; label: string; days: number }[] = [
+  { key: '7d', label: 'Last 7 days', days: 7 },
+  { key: '30d', label: 'Last 30 days', days: 30 },
+  { key: 'all', label: 'All time', days: 365 },
 ];
 
 type JourneyFilter = 'all' | 'ontime' | 'delays';
 
-function JourneysPanel({ trips, now }: { trips: Trip[]; now: Date }) {
+function JourneysPanel({ trips }: { trips: Array<{
+  routeId: string; routeLabel: string; planDate: string; status: string; stops: number;
+  packages: number; distanceKm: number; onTimePercent: number;
+}> }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<JourneyFilter>('all');
   const ref = useRef<HTMLDivElement>(null);
@@ -33,8 +33,8 @@ function JourneysPanel({ trips, now }: { trips: Trip[]; now: Date }) {
 
   const counts = {
     all: trips.length,
-    ontime: trips.filter((t) => t.onTime === 100).length,
-    delays: trips.filter((t) => t.onTime < 100).length,
+    ontime: trips.filter((t) => t.onTimePercent === 100).length,
+    delays: trips.filter((t) => t.onTimePercent < 100).length,
   };
   const options: { key: JourneyFilter; label: string }[] = [
     { key: 'all', label: 'All trips' },
@@ -44,7 +44,7 @@ function JourneysPanel({ trips, now }: { trips: Trip[]; now: Date }) {
   const label = options.find((o) => o.key === filter)?.label ?? 'All trips';
 
   const rows = trips.filter((t) =>
-    filter === 'ontime' ? t.onTime === 100 : filter === 'delays' ? t.onTime < 100 : true);
+    filter === 'ontime' ? t.onTimePercent === 100 : filter === 'delays' ? t.onTimePercent < 100 : true);
 
   return (
     <section className="dv-panel">
@@ -87,14 +87,14 @@ function JourneysPanel({ trips, now }: { trips: Trip[]; now: Date }) {
       ) : (
         <div className="dv-journeys">
           {rows.map((t) => (
-            <div className="dv-journey" key={t.id}>
+            <div className="dv-journey" key={t.routeId}>
               <span className="dv-journey-icon"><Truck size={20} aria-hidden /></span>
               <div className="dv-journey-body">
-                <div className="dv-journey-id">{t.id}</div>
-                <div className="dv-journey-meta">{formatShortDate(daysAgoDate(now, t.daysAgo))} · {t.duration}</div>
-                <div className="dv-journey-meta dv-journey-strong">{t.stops} stops · {t.km} km</div>
+                <div className="dv-journey-id">{t.routeLabel}</div>
+                <div className="dv-journey-meta">{new Date(t.planDate).toLocaleDateString()} · {t.status}</div>
+                <div className="dv-journey-meta dv-journey-strong">{t.stops} stops · {t.distanceKm} km</div>
               </div>
-              <span className={t.onTime === 100 ? 'dv-status-green' : 'dv-status-amber'}>{t.onTime}% on time</span>
+              <span className={t.onTimePercent === 100 ? 'dv-status-green' : 'dv-status-amber'}>{t.onTimePercent}% on time</span>
             </div>
           ))}
         </div>
@@ -104,26 +104,22 @@ function JourneysPanel({ trips, now }: { trips: Trip[]; now: Date }) {
 }
 
 export function DriverHistoryPage() {
-  const now = useNow();
+  const { history, historyLoading, historyError, loadHistory } = useDriverData();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [period, setPeriod] = useState<HistoryPeriod>('30d');
 
-  const trips = useMemo(() => tripsForPeriod(period), [period]);
+  const periodConfig = PERIODS.find((item) => item.key === period) ?? PERIODS[1];
+  useEffect(() => { void loadHistory(periodConfig.days); }, [periodConfig.days]);
 
   const metrics = useMemo(() => {
-    const count = trips.length;
-    const onTime = count ? Math.round(trips.reduce((s, t) => s + t.onTime, 0) / count) : null;
-    const distance = trips.reduce((s, t) => s + t.km, 0);
-    const packages = trips.reduce((s, t) => s + t.packages, 0);
-    let range = 'No trips in this period';
-    if (count === 1) range = formatDayMonth(daysAgoDate(now, trips[0].daysAgo));
-    else if (count > 1) {
-      const newest = trips.reduce((a, b) => (a.daysAgo < b.daysAgo ? a : b));
-      const oldest = trips.reduce((a, b) => (a.daysAgo > b.daysAgo ? a : b));
-      range = `${formatDayMonth(daysAgoDate(now, oldest.daysAgo))} – ${formatDayMonth(daysAgoDate(now, newest.daysAgo))}`;
-    }
-    return { count, onTime, distance, packages, range };
-  }, [trips, now]);
+    return {
+      count: history?.tripCount ?? 0,
+      onTime: history?.tripCount ? history.onTimePercent : null,
+      distance: history?.distanceKm ?? 0,
+      packages: history?.packages ?? 0,
+      range: history?.tripCount ? periodConfig.label : 'No trips in this period',
+    };
+  }, [history, periodConfig]);
 
   const isDefault = period === '30d';
   const eyebrow = isDefault
@@ -166,6 +162,8 @@ export function DriverHistoryPage() {
         </div>
       )}
 
+      {historyLoading && <p className="dv-panel-help">Loading trip history…</p>}
+      {historyError && <p className="dv-photo-error" role="alert">{historyError}</p>}
       <div className="dv-metric-grid">
         <div className="dv-metric-card">
           <span className="dv-metric-label"><RouteIcon size={16} aria-hidden /> Recent trips</span>
@@ -189,29 +187,54 @@ export function DriverHistoryPage() {
         </div>
       </div>
 
-      <JourneysPanel trips={trips} now={now} />
+      <JourneysPanel trips={history?.trips ?? []} />
 
       <section className="dv-panel dv-reports">
         <div className="dv-panel-head">
           <h2>Reports &amp; records</h2>
           <ClipboardList size={18} aria-hidden className="dv-muted-icon" />
         </div>
-        <div className="dv-reports-empty">
-          <ClipboardList size={32} aria-hidden />
-          <strong>No reports yet</strong>
-          <span>Your fine and fuel records will appear here.</span>
-        </div>
+        {history && history.fineReports.length === 0 && history.fuelLogs.length === 0 ? (
+          <div className="dv-reports-empty">
+            <ClipboardList size={32} aria-hidden />
+            <strong>No reports yet</strong>
+            <span>Your fine and fuel records will appear here.</span>
+          </div>
+        ) : (
+          <div className="dv-journeys">
+            {history?.fineReports.map((report) => (
+              <div className="dv-journey" key={report.id}>
+                <span className="dv-journey-icon"><ClipboardList size={20} aria-hidden /></span>
+                <div className="dv-journey-body">
+                  <div className="dv-journey-id">Parking fine · {report.currency} {report.amount}</div>
+                  <div className="dv-journey-meta">{new Date(report.issuedAt).toLocaleDateString()} · {report.status}</div>
+                  <div className="dv-journey-meta">{report.reason}</div>
+                </div>
+              </div>
+            ))}
+            {history?.fuelLogs.map((log) => (
+              <div className="dv-journey" key={log.id}>
+                <span className="dv-journey-icon"><Truck size={20} aria-hidden /></span>
+                <div className="dv-journey-body">
+                  <div className="dv-journey-id">Fuel · {log.litres} L</div>
+                  <div className="dv-journey-meta">{log.fuelDate} · {log.station}</div>
+                  <div className="dv-journey-meta">{log.currency} {log.cost ?? '—'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="dv-panel dv-sync-card">
         <UploadCloud size={20} aria-hidden className="dv-sync-icon" />
         <div>
           <strong>Your records are up to date</strong>
-          <p>Demo records stay on this device.</p>
+          <p>Records are synced with Waypoint.</p>
         </div>
       </section>
 
-      <p className="dv-footnote">Showing {TRIPS.length} trips in total.</p>
+      <p className="dv-footnote">Showing {history?.tripCount ?? 0} trips in this period.</p>
     </>
   );
 }

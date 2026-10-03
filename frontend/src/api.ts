@@ -155,6 +155,115 @@ export type LoadingMissingItem = {
   status: 'pending-investigation' | 'located';
 };
 
+export type DriverRouteStop = {
+  stopId: string;
+  sequence: number;
+  orderId: string;
+  orderRef: string;
+  outletId: string;
+  outletName: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  districtName: string;
+  category: string;
+  window: string;
+  access: string;
+  packages: number;
+  weightKg: number;
+  volumeM3: number;
+  distanceKm: number;
+  driveMinutes: number;
+  status: string;
+};
+
+export type DriverTodayRoute = {
+  routeId: string;
+  routeLabel: string;
+  vehicleId: string;
+  depotName: string;
+  districtName: string;
+  status: string;
+  totalStops: number;
+  completedStops: number;
+  plannedDistanceKm: number;
+  plannedMinutes: number;
+  firstWindow: string | null;
+  stops: DriverRouteStop[];
+};
+
+export type DriverProofOfDelivery = {
+  id: string;
+  stopId: string;
+  receiverName: string | null;
+  outcome: 'DELIVERED' | 'PARTIAL_DELIVERY' | 'UNABLE_TO_DELIVER';
+  deliveredUnits: number | null;
+  shortUnits: number | null;
+  conditionNotes: string | null;
+  photoReference: string | null;
+  signatureReference: string | null;
+  eventTime: string;
+  createdAt: string;
+};
+
+export type DriverFuelLog = {
+  id: string;
+  fuelDate: string;
+  odometerKm: number;
+  litres: number;
+  station: string;
+  cost: number | null;
+  currency: string;
+  receiptReference: string | null;
+  createdAt: string;
+};
+
+export type DriverFineReport = {
+  id: string;
+  stopId: string | null;
+  amount: number;
+  currency: string;
+  reason: string;
+  location: string | null;
+  ticketReference: string | null;
+  issuedAt: string;
+  status: string;
+  createdAt: string;
+};
+
+export type DriverIncidentReport = {
+  id: string;
+  stopId: string | null;
+  type: string;
+  notes: string | null;
+  location: string | null;
+  reportedAt: string;
+  status: string;
+  createdAt: string;
+};
+
+export type DriverHistory = {
+  tripCount: number;
+  completedStops: number;
+  distanceKm: number;
+  packages: number;
+  onTimePercent: number;
+  trips: Array<{
+    routeId: string;
+    routeLabel: string;
+    planDate: string;
+    status: string;
+    stops: number;
+    completedStops: number;
+    packages: number;
+    distanceKm: number;
+    onTimePercent: number;
+  }>;
+  fuelLogs: DriverFuelLog[];
+  fineReports: DriverFineReport[];
+  proofOfDelivery: DriverProofOfDelivery[];
+};
+
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -246,6 +355,11 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify({ active }),
   }),
+  adminSetUserAssignment: (id: string, payload: { depotId?: string; vehicleId?: string }) =>
+    request<AdminUser>(`/admin/users/${id}/assignment`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   adminOverview: (params?: { date?: string; depotId?: string; brand?: string; periodDays?: number }) => request<AdminOverview>(`/admin/overview${queryString({
     date: params?.date,
     depotId: params?.depotId,
@@ -289,4 +403,59 @@ export const api = {
   updateLoadingMissing: (id: string, status: string) => request<void>(`/loading/missing/${id}`, {
     method: 'PATCH', body: JSON.stringify({ status }),
   }),
+  driverTodayRoute: () => request<DriverTodayRoute>('/driver/route/today'),
+  driverStartRoute: (routeId: string) => request<void>(`/driver/routes/${routeId}/start`, { method: 'POST' }),
+  driverUpdateStop: (stopId: string, payload: { status: DriverProofOfDelivery['outcome'] | 'PLANNED' | 'IN_TRANSIT' | 'ARRIVED' | 'SKIPPED'; note?: string }) =>
+    request<void>(`/driver/stops/${stopId}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  driverSubmitProofOfDelivery: (stopId: string, payload: {
+    receiverName?: string;
+    outcome: DriverProofOfDelivery['outcome'];
+    deliveredUnits?: number;
+    shortUnits?: number;
+    conditionNotes?: string;
+    photoReference?: string;
+    signatureReference?: string;
+    clientEventId?: string;
+    eventTime?: string;
+  }) => request<DriverProofOfDelivery>(`/driver/stops/${stopId}/proof-of-delivery`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  driverFuelLogs: () => request<DriverFuelLog[]>('/driver/fuel'),
+  driverCreateFuelLog: (payload: {
+    fuelDate: string;
+    odometerKm: number;
+    litres: number;
+    station: string;
+    cost?: number;
+    currency?: string;
+    receiptReference?: string;
+    clientEventId?: string;
+  }) => request<DriverFuelLog>('/driver/fuel', {
+    method: 'POST',
+    body: JSON.stringify({ currency: 'LKR', ...payload }),
+  }),
+  driverCreateFineReport: (payload: {
+    stopId?: string;
+    amount: number;
+    currency?: string;
+    reason: string;
+    location?: string;
+    ticketReference?: string;
+    issuedAt?: string;
+  }) => request<DriverFineReport>('/driver/fines', {
+    method: 'POST',
+    body: JSON.stringify({ currency: 'LKR', ...payload }),
+  }),
+  driverCreateIncidentReport: (payload: {
+    stopId?: string;
+    type: string;
+    notes?: string;
+    location?: string;
+    reportedAt?: string;
+  }) => request<DriverIncidentReport>('/driver/incidents', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  driverHistory: (periodDays = 30) => request<DriverHistory>(`/driver/history${queryString({ periodDays: String(periodDays) })}`),
 };

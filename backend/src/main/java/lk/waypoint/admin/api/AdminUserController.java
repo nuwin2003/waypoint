@@ -45,6 +45,12 @@ public class AdminUserController {
         return UserResponse.from(service.setActive(id, request.active()));
     }
 
+    @PatchMapping("/{id}/assignment")
+    public UserResponse setAssignment(@PathVariable UUID id,
+            @Valid @RequestBody AssignmentRequest request) {
+        return UserResponse.from(service.setAssignment(id, request.depotId(), request.vehicleId()));
+    }
+
     public record CreateUserRequest(
             @Email @NotBlank @Size(max = 254) String email,
             @NotBlank @Size(min = 8, max = 72) String password,
@@ -54,6 +60,7 @@ public class AdminUserController {
             @Size(max = 16) String vehicleId) { }
 
     public record StatusRequest(boolean active) { }
+    public record AssignmentRequest(@Size(max = 32) String depotId, @Size(max = 16) String vehicleId) { }
 
     public record UserResponse(UUID id, String email, String role, String outletId,
             String outletName, String depotId, String depotName, String vehicleId,

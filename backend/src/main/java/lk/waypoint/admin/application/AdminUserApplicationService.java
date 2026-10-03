@@ -48,6 +48,10 @@ public class AdminUserApplicationService {
             String outletId, String depotId, String vehicleId) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         String storedRole = role.equals("STOREKEEPER") ? "STORE_MANAGER" : role;
+        validateAssignment(storedRole, depotId, vehicleId, null);
+        if ("DRIVER".equals(storedRole) && (depotId == null || depotId.isBlank())) {
+            depotId = findVehicleDepot(vehicleId);
+        }
         UUID id = UUID.randomUUID();
         try {
             jdbc.update("""
@@ -58,6 +62,21 @@ public class AdminUserApplicationService {
         } catch (DuplicateKeyException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "An account with this email already exists", exception);
+        }
+        return find(id);
+    }
+
+    @Transactional
+    public UserSummary setAssignment(UUID id, String depotId, String vehicleId) {
+        UserSummary user = find(id);
+        String storedRole = user.role();
+        validateAssignment(storedRole, depotId, vehicleId, id);
+        int changed = jdbc.update("""
+                UPDATE app_user SET depot_id = ?, vehicle_id = ?
+                WHERE id = ?
+                """, depotId, vehicleId, id);
+        if (changed == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User was not found");
         }
         return find(id);
     }
@@ -89,6 +108,41 @@ public class AdminUserApplicationService {
                 row.getString("depot_name"),
                 row.getString("vehicle_id"),
                 row.getBoolean("active")), id).stream().findFirst().orElseThrow();
+    }
+
+    private void validateAssignment(String role, String depotId, String vehicleId, UUID currentUserId) {
+        if ("DRIVER".equals(role) && (vehicleId == null || vehicleId.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A Driver account must have an assigned vehicle");
+        }
+        if (vehicleId == null || vehicleId.isBlank()) return;
+        var vehicles = jdbc.query("""
+                SELECT home_depot_id FROM vehicle
+                WHERE id = ? AND status = 'AVAILABLE'
+                """, (row, number) -> row.getString("home_depot_id"), vehicleId);
+        if (vehicles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The selected vehicle does not exist or is not available");
+        }
+        String vehicleDepot = vehicles.getFirst();
+        if (depotId != null && !depotId.isBlank() && !vehicleDepot.equals(depotId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The vehicle belongs to a different depot");
+        }
+        var assigned = currentUserId == null
+                ? jdbc.query("SELECT id FROM app_user WHERE vehicle_id = ? AND active = true", (row, number) -> row.getObject("id", UUID.class), vehicleId)
+                : jdbc.query("SELECT id FROM app_user WHERE vehicle_id = ? AND active = true AND id <> ?", (row, number) -> row.getObject("id", UUID.class), vehicleId, currentUserId);
+        if (!assigned.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That vehicle is already assigned to an active account");
+        }
+    }
+
+    private String findVehicleDepot(String vehicleId) {
+        return jdbc.query("SELECT home_depot_id FROM vehicle WHERE id = ?",
+                (row, number) -> row.getString("home_depot_id"), vehicleId).stream().findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "The selected vehicle does not exist"));
     }
 
     public record UserSummary(UUID id, String email, String role, String outletId,
