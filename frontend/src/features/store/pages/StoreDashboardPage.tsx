@@ -4,11 +4,13 @@ import { api, type Order } from '../../../api';
 import storeManagerHero from '../../../assets/store-manager-hero.png';
 import expectedDelivery from '../../../assets/expected-delivery.png';
 import arrowIcon from '../../../assets/arrow-icon.png';
+import { useOrderCutoff } from '../components/StoreUI';
 import '../store.css';
 
 export function StoreDashboardPage() {
   const { searchQuery } = (useOutletContext() as { searchQuery?: string }) || {};
   const navigate = useNavigate();
+  const { beforeCutoff } = useOrderCutoff();
 
   const [initialOrders, setInitialOrders] = useState<Array<{ id: string; day: string; type: string; units: number; invoice: string; status: string }>>([]);
   useEffect(() => {
@@ -44,21 +46,23 @@ export function StoreDashboardPage() {
       </div>
 
       {/* Place Order Banner */}
-      <div className="store-order-banner">
-        <img className="store-order-art" src={storeManagerHero} alt="Order sheet and paper plane" />
-        <div className="store-order-copy">
-          <div className="store-order-title">PLACE ORDER NOW</div>
-          <div className="store-order-subtitle">Orders close at 4:00 PM</div>
+      {beforeCutoff && (
+        <div className="store-order-banner">
+          <img className="store-order-art" src={storeManagerHero} alt="Order sheet and paper plane" />
+          <div className="store-order-copy">
+            <div className="store-order-title">PLACE ORDER NOW</div>
+            <div className="store-order-subtitle">Orders close at 4:00 PM</div>
+          </div>
+          <button
+            className="btn-white"
+            onClick={() => navigate('/store/place-order')}
+            style={{ padding: '12px 24px', fontSize: 16 }}
+            type="button"
+          >
+            Order <img className="store-order-arrow" src={arrowIcon} alt="" aria-hidden="true" />
+          </button>
         </div>
-        <button
-          className="btn-white"
-          onClick={() => navigate('/store/place-order')}
-          style={{ padding: '12px 24px', fontSize: 16 }}
-          type="button"
-        >
-          Order <img className="store-order-arrow" src={arrowIcon} alt="" aria-hidden="true" />
-        </button>
-      </div>
+      )}
 
       {/* Today's Order Status - 4 Stat Cards */}
       <div>
