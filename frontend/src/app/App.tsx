@@ -31,6 +31,7 @@ import { RoutePage } from '../features/driver/pages/RoutePage';
 import { NavigationPage } from '../features/driver/pages/NavigationPage';
 import { DeliveryPage } from '../features/driver/pages/DeliveryPage';
 import { DriverHistoryPage } from '../features/driver/pages/DriverHistoryPage';
+import { DriverProfilePage } from '../features/driver/pages/DriverProfilePage';
 import { AdminWorkspace } from '../features/admin/AdminWorkspace';
 import { AdminOverviewPage } from '../features/admin/pages/AdminOverviewPage';
 import { AuditTrailPage } from '../features/admin/pages/AuditTrailPage';
@@ -132,6 +133,7 @@ export default function App() {
           <Route path="route/map" element={<NavigationPage />} />
           <Route path="delivery" element={<DeliveryPage />} />
           <Route path="history" element={<DriverHistoryPage />} />
+          <Route path="profile" element={<DriverProfilePage />} />
         </Route>
 
         {/* Fallback */}
