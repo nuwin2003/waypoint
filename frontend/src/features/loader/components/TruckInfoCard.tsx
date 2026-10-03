@@ -3,6 +3,7 @@ import { Phone, MessageSquare, Send } from 'lucide-react';
 export type LoadStatus = 'loading' | 'ready' | 'flagged' | 'not-started';
 
 export interface VehicleEntry {
+  tripId?: string;
   id: string;
   plate: string;
   type: string;

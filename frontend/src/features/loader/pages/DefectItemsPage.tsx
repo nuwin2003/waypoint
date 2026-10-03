@@ -1,80 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../../../api';
 import { DefectSummaryStats } from '../components/DefectSummaryStats';
 import { AffectedPackagesList, DefectPackageItem } from '../components/AffectedPackagesList';
 import { ResolveDefectCard } from '../components/ResolveDefectCard';
 import { RescanModal } from '../components/RescanModal';
 import '../defectPage.css';
 
-const INITIAL_DEFECT_ITEMS: DefectPackageItem[] = [
-  {
-    id: 'defect-1',
-    packageCode: 'PKG-007',
-    typeAndCargo: 'Box 07 · Glass cookware set · Crushed corner',
-    quantityNote: '1 of 4 units',
-    issueNote: 'Outer carton compressed 6 cm at rear-right edge.',
-    severity: 'high',
-    timestamp: '09:43:18',
-    status: 'unresolved',
-  },
-  {
-    id: 'defect-2',
-    packageCode: 'PKG-009',
-    typeAndCargo: 'Pallet 09 · Small appliances · Torn stretch wrap',
-    quantityNote: '1 pallet',
-    issueNote: 'Wrap split along left face; product cartons still sealed.',
-    severity: 'medium',
-    timestamp: '09:46:02',
-    status: 'unresolved',
-  },
-  {
-    id: 'defect-3',
-    packageCode: 'PKG-010',
-    typeAndCargo: 'Box 10 · Mixer accessories · Wet label',
-    quantityNote: '2 of 8 cartons',
-    issueNote: 'Barcode readable; surface moisture near shipping label.',
-    severity: 'medium',
-    timestamp: '09:48:27',
-    status: 'unresolved',
-  },
-];
-
 export function DefectItemsPage() {
-  const [defectItems, setDefectItems] = useState<DefectPackageItem[]>(INITIAL_DEFECT_ITEMS);
-  const [selectedItem, setSelectedItem] = useState<DefectPackageItem | null>(INITIAL_DEFECT_ITEMS[0]);
+  const [defectItems, setDefectItems] = useState<DefectPackageItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<DefectPackageItem | null>(null);
   const [rescanTarget, setRescanTarget] = useState<DefectPackageItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDefects = () => api.loadingDefects().then((items) => {
+    const mapped = items.map((item) => ({
+      id: item.id, packageCode: item.packageCode, typeAndCargo: item.typeAndCargo,
+      quantityNote: `${item.units} units`, issueNote: item.issueNote || 'No notes provided.',
+      severity: item.severity === 'critical' ? 'high' : item.severity,
+      timestamp: new Date(item.timestamp).toLocaleTimeString(),
+      status: item.status,
+    } as DefectPackageItem));
+    setDefectItems(mapped);
+    setSelectedItem((current) => mapped.find((item) => item.id === current?.id) ?? mapped[0] ?? null);
+  });
+
+  useEffect(() => { loadDefects().catch((e) => setError(e instanceof Error ? e.message : 'Could not load defects.')); }, []);
 
   // Stats calculations
   const unresolvedItems = defectItems.filter((i) => i.status !== 'resolved');
   const defectCount = unresolvedItems.length;
-  const scannedCount = 10;
-  const remainingCount = 8;
-  const recordedCount = 8;
-  const totalCount = 10;
+  const totalCount = defectItems.reduce((max, item) => Math.max(max, Number(item.quantityNote.match(/\d+/)?.[0] ?? 0)), 0);
+  const recordedCount = defectItems.length;
+  const scannedCount = defectItems.filter((item) => item.status !== 'unresolved').length;
+  const remainingCount = Math.max(0, totalCount - recordedCount);
 
   const handleSelectItem = (item: DefectPackageItem) => {
     setSelectedItem(item);
   };
 
   const handleConfirmDefect = (item: DefectPackageItem) => {
-    setDefectItems((prev) =>
-      prev.map((i) =>
-        i.id === item.id ? { ...i, status: 'confirmed' } : i
-      )
-    );
+    api.updateLoadingDefect(item.id, 'confirmed').then(loadDefects).catch((e) => setError(e instanceof Error ? e.message : 'Could not confirm defect.'));
     if (selectedItem && selectedItem.id === item.id) {
       setSelectedItem({ ...selectedItem, status: 'confirmed' });
     }
   };
 
   const handleMarkResolved = (item: DefectPackageItem) => {
-    setDefectItems((prev) =>
-      prev.map((i) =>
-        i.id === item.id ? { ...i, status: 'resolved' } : i
-      )
-    );
+    api.updateLoadingDefect(item.id, 'resolved').then(loadDefects).catch((e) => setError(e instanceof Error ? e.message : 'Could not resolve defect.'));
     // Switch selection to next unresolved if present
-    const remaining = defectItems.filter((i) => i.id !== item.id && i.status !== 'resolved');
-    setSelectedItem(remaining.length > 0 ? remaining[0] : null);
   };
 
   const handleOpenRescan = (item: DefectPackageItem) => {
@@ -88,6 +61,7 @@ export function DefectItemsPage() {
 
   return (
     <div className="defect-items-page-container">
+      {error && <p role="alert">{error}</p>}
       {/* 1. Page Header */}
       <div className="defect-page-header">
         <h1 className="defect-page-title">Defect Items</h1>

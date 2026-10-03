@@ -101,6 +101,59 @@ export type PlanningContext = {
   vehicles: Vehicle[];
 };
 
+export type LoadingTrip = {
+  tripId: string;
+  vehicleId: string;
+  tripNo: number;
+  brand: ProductBrandCode;
+  temperature: string;
+  status: string;
+  totalStops: number;
+  completedStops: number;
+  totalWeightKg: number;
+  totalVolumeM3: number;
+  districtId: string;
+};
+
+export type LoadingTripDetails = LoadingTrip & {
+  stops: Array<{
+    stopId: string;
+    orderId: string;
+    orderRef: string;
+    outletId: string;
+    outletName: string;
+    sequence: number;
+    status: string;
+    units: number;
+    weightKg: number;
+    volumeM3: number;
+  }>;
+};
+
+export type LoadingDefect = {
+  id: string;
+  stopId: string;
+  packageCode: string;
+  typeAndCargo: string;
+  issueNote: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: string;
+  status: 'unresolved' | 'confirmed' | 'resolved';
+  units: number;
+  scannedCount: number;
+  totalCount: number;
+};
+
+export type LoadingMissingItem = {
+  id: string;
+  stopId: string;
+  packageCode: string;
+  orderRef: string;
+  vehicleId: string;
+  weight: string;
+  status: 'pending-investigation' | 'located';
+};
+
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -215,4 +268,24 @@ export const api = {
     body: JSON.stringify({ depotId, planDate }),
   }),
   planningContext: (depotId: string, planDate: string) => request<PlanningContext>(`/plans/context${queryString({ depotId, planDate })}`),
+  loadingQueue: (planDate?: string) => request<LoadingTrip[]>(`/loading/queue${queryString({ planDate })}`),
+  loadingTrip: (tripId: string) => request<LoadingTripDetails>(`/loading/trips/${tripId}`),
+  updateLoadingStop: (stopId: string, status: string) => request<void>(`/loading/stops/${stopId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }),
+  updateLoadingTrip: (tripId: string, status: string) => request<void>(`/loading/trips/${tripId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }),
+  loadingDefects: () => request<LoadingDefect[]>('/loading/defects'),
+  createLoadingDefect: (payload: { stopId: string; issueType: string; severity: string; notes: string }) =>
+    request<LoadingDefect>('/loading/defects', { method: 'POST', body: JSON.stringify(payload) }),
+  updateLoadingDefect: (id: string, status: string) => request<void>(`/loading/defects/${id}`, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+  }),
+  loadingMissing: () => request<LoadingMissingItem[]>('/loading/missing'),
+  updateLoadingMissing: (id: string, status: string) => request<void>(`/loading/missing/${id}`, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+  }),
 };

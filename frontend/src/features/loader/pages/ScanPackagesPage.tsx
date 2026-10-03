@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useEffect } from 'react';
 import { ChevronDown, CheckCircle2, Truck } from 'lucide-react';
+import { api } from '../../../api';
 import { PackageScannerCard, PackageData } from '../components/PackageScannerCard';
 import { LoadProgressCard } from '../components/LoadProgressCard';
 import { RecentScansCard, RecentScanItem } from '../components/RecentScansCard';
@@ -67,45 +69,64 @@ const TRUCK_DATASETS: Record<string, TruckData> = {
   },
 };
 
-const TRUCK_KEYS = Object.keys(TRUCK_DATASETS);
-
 export function ScanPackagesPage() {
-  const [selectedTruckKey, setSelectedTruckKey] = useState<string>(TRUCK_KEYS[0]);
+  const [truckDatasets, setTruckDatasets] = useState<Record<string, TruckData>>({});
+  const [selectedTruckKey, setSelectedTruckKey] = useState<string>('');
   const [truckDropdownOpen, setTruckDropdownOpen] = useState(false);
 
   // State keyed by truck
-  const [truckState, setTruckState] = useState<Record<string, { packages: PackageData[]; currentIndex: number; scans: RecentScanItem[] }>>({
-    'Truck – LB 2229': {
-      packages: TRUCK_DATASETS['Truck – LB 2229'].packages,
-      currentIndex: 6, // PKG-007
-      scans: [
-        { id: '1', code: 'PKG-006', details: 'Pallet 06 • 84 kg', time: '09:41' },
-        { id: '2', code: 'PKG-005', details: 'Box 05 • 31 kg', time: '09:39' },
-        { id: '3', code: 'PKG-004', details: 'Pallet 04 • 118 kg', time: '09:36' },
-      ],
-    },
-    'Truck – LG 3342': {
-      packages: TRUCK_DATASETS['Truck – LG 3342'].packages,
-      currentIndex: 2,
-      scans: [
-        { id: '102', code: 'PKG-102', details: 'Box 02 • 40 kg', time: '08:52' },
-        { id: '101', code: 'PKG-101', details: 'Pallet 01 • 110 kg', time: '08:45' },
-      ],
-    },
-    'Truck – LG 6789': {
-      packages: TRUCK_DATASETS['Truck – LG 6789'].packages,
-      currentIndex: 0,
-      scans: [],
-    },
-  });
+  const [truckState, setTruckState] = useState<Record<string, { packages: PackageData[]; currentIndex: number; scans: RecentScanItem[] }>>({});
 
   // Modals
   const [manualCodeOpen, setManualCodeOpen] = useState(false);
   const [flagDefectOpen, setFlagDefectOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [loadCompleteSuccess, setLoadCompleteSuccess] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const activeTruck = TRUCK_DATASETS[selectedTruckKey] ?? TRUCK_DATASETS['Truck – LB 2229'];
+  useEffect(() => {
+    api.loadingQueue().then(async (queue) => {
+      const details = await Promise.all(queue.map((trip) => api.loadingTrip(trip.tripId)));
+      const datasets: Record<string, TruckData> = {};
+      details.forEach((trip) => {
+        const key = `Truck – ${trip.vehicleId}`;
+        datasets[key] = {
+          id: trip.vehicleId,
+          name: key,
+          loadCode: `Trip ${trip.tripNo}`,
+          dock: 'Dock —',
+          shipment: `${trip.stops.length} orders`,
+          packages: trip.stops.map((stop, index) => ({
+            stopId: stop.stopId,
+            id: stop.orderRef,
+            type: 'Order',
+            weight: `${stop.weightKg} kg`,
+            dimensions: `${stop.volumeM3} m³`,
+            zone: `Sequence ${index + 1}`,
+            category: stop.outletName,
+            status: stop.status === 'LOADED' || stop.status === 'SHORT_LOADED' ? 'scanned' : index === 0 ? 'current' : 'pending',
+          })),
+        };
+      });
+      setTruckDatasets(datasets);
+      const keys = Object.keys(datasets);
+      if (keys.length > 0) setSelectedTruckKey(keys[0]);
+      setTruckState(Object.fromEntries(keys.map((key) => {
+        const packages = datasets[key].packages;
+        const currentIndex = Math.max(0, packages.findIndex((pkg) => pkg.status !== 'scanned'));
+        return [key, { packages, currentIndex, scans: [] }];
+      })));
+    }).catch((error) => setApiError(error instanceof Error ? error.message : 'Could not load loading trips.'));
+  }, []);
+
+  const activeTruck = truckDatasets[selectedTruckKey] ?? Object.values(truckDatasets)[0] ?? {
+    id: '',
+    name: 'No loading trip',
+    loadCode: 'No trip',
+    dock: 'Dock —',
+    shipment: 'No orders',
+    packages: [],
+  };
   const currentTruckState = truckState[selectedTruckKey] ?? {
     packages: activeTruck.packages,
     currentIndex: 0,
@@ -127,10 +148,11 @@ export function ScanPackagesPage() {
 
   // Calculate dynamic loaded weight
   const loadedWeight = useMemo(() => {
-    const baseWeight = 5.9; // base tons
-    const additional = (scannedCount * 0.1);
-    return `${(baseWeight + additional).toFixed(1)}t`;
-  }, [scannedCount]);
+    const kilograms = packages
+      .filter((pkg) => pkg.status === 'scanned')
+      .reduce((total, pkg) => total + (Number.parseFloat(pkg.weight) || 0), 0);
+    return `${(kilograms / 1000).toFixed(2)}t`;
+  }, [packages]);
 
   // Execute scan transition
   const executeScan = (targetIndex: number) => {
@@ -144,6 +166,12 @@ export function ScanPackagesPage() {
       status: 'scanned',
       timestamp: timeStr,
     };
+    const stopId = pkgToScan.stopId;
+    if (stopId) {
+      api.updateLoadingStop(stopId, 'LOADED').catch((error) => {
+        setApiError(error instanceof Error ? error.message : 'Could not save package status.');
+      });
+    }
 
     // Prepend new scan to the top of recent scans list
     const newScanItem: RecentScanItem = {
@@ -190,7 +218,17 @@ export function ScanPackagesPage() {
   };
 
   const handleReportDefect = (defect: { packageId: string; issueType: string; severity: string; notes: string }) => {
-    console.log('Defect flagged for package:', defect);
+    const packageToFlag = packages.find((pkg) => pkg.id === defect.packageId);
+    if (packageToFlag?.stopId) {
+      api.createLoadingDefect({
+        stopId: packageToFlag.stopId,
+        issueType: defect.issueType,
+        severity: defect.severity === 'critical' ? 'critical' : defect.severity,
+        notes: defect.notes,
+      }).catch((error) => {
+        setApiError(error instanceof Error ? error.message : 'Could not save the package defect.');
+      });
+    }
     // Advance to next pending package
     const nextIdx = packages.findIndex((p, idx) => idx > currentIndex && p.status !== 'scanned');
     if (nextIdx !== -1) {
@@ -213,6 +251,7 @@ export function ScanPackagesPage() {
 
   return (
     <div className="scan-packages-page-container">
+      {apiError && <p role="alert" className="loader-empty-state">{apiError}</p>}
       {/* Page Header */}
       <div className="scan-page-header">
         <div className="scan-page-title-area">
@@ -245,7 +284,7 @@ export function ScanPackagesPage() {
           </button>
           {truckDropdownOpen && (
             <div className="truck-dropdown-menu">
-              {TRUCK_KEYS.map((key) => (
+              {Object.keys(truckDatasets).map((key) => (
                 <button
                   key={key}
                   type="button"

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { api, LoadingTripDetails } from '../../../api';
 import { TruckInfoCard, VehicleEntry, LoadStatus } from '../components/TruckInfoCard';
 import { TruckCapacityCard } from '../components/TruckCapacityCard';
 import { TruckVisualCard } from '../components/TruckVisualCard';
@@ -161,24 +162,75 @@ export function LoaderDashboardPage() {
   const [vehicleFilter, setVehicleFilter] = useState<'all' | LoadStatus>('all');
   const [selectedVehicleForClearance, setSelectedVehicleForClearance] = useState<VehicleEntry | null>(null);
   const [clearedVehicle, setClearedVehicle] = useState<string | null>(null);
+  const [liveVehicles, setLiveVehicles] = useState<VehicleEntry[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<LoadingTripDetails | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
-  const vehicle = VEHICLES[activeVehicleIndex];
+  useEffect(() => {
+    api.loadingQueue()
+      .then((trips) => {
+        setLiveVehicles(trips.map((trip) => ({
+          tripId: trip.tripId,
+          id: trip.vehicleId,
+          plate: trip.vehicleId,
+          type: trip.temperature === 'CHILLED' ? 'Freezer Truck' : 'Dry-Box Truck',
+          dock: '—',
+          route: `Peliyagoda to ${trip.districtId}`,
+          originSub: 'Peliyagoda',
+          destSub: trip.districtId,
+          driver: 'Unassigned',
+          loadPct: trip.totalStops === 0 ? 0 : Math.round((trip.completedStops / trip.totalStops) * 100),
+          status: trip.completedStops === trip.totalStops && trip.totalStops > 0
+            ? 'ready'
+            : trip.completedStops > 0 ? 'loading' : 'not-started',
+          packages: trip.totalStops,
+          tempReq: trip.temperature === 'CHILLED' ? 'Chilled' : 'Dry',
+          stopsDone: trip.completedStops,
+          totalStops: trip.totalStops,
+        })));
+      })
+      .catch((error) => {
+        setLiveVehicles([]);
+        setLoadingError(error instanceof Error ? error.message : 'Could not load the vehicle queue.');
+      });
+  }, []);
+
+  const vehicles = liveVehicles;
+  const vehicle = vehicles[activeVehicleIndex] ?? null;
 
   const changeVehicle = (step: number) => {
-    setActiveVehicleIndex((index) => (index + step + VEHICLES.length) % VEHICLES.length);
+    if (vehicles.length === 0) return;
+    setActiveVehicleIndex((index) => (index + step + vehicles.length) % vehicles.length);
   };
+
+  useEffect(() => {
+    if (!vehicle?.tripId) {
+      setSelectedTrip(null);
+      return;
+    }
+    api.loadingTrip(vehicle.tripId).then(setSelectedTrip).catch((error) => {
+      setSelectedTrip(null);
+      setLoadingError(error instanceof Error ? error.message : 'Could not load the trip sequence.');
+    });
+  }, [vehicle?.tripId]);
 
   const handleOpenClearance = (entry: VehicleEntry) => {
     setSelectedVehicleForClearance(entry);
   };
 
   const handleConfirmClearance = (entry: VehicleEntry) => {
+    if (entry.tripId) {
+      api.updateLoadingTrip(entry.tripId, 'LOADED').catch((error) => {
+        setLoadingError(error instanceof Error ? error.message : 'Could not clear the vehicle for departure.');
+      });
+    }
     setClearedVehicle(entry.plate);
     setSelectedVehicleForClearance(null);
   };
 
   return (
     <div className="loader-workspace">
+      {loadingError && <div className="loader-clearance-notice" role="alert">{loadingError}</div>}
       {/* Departure Clearance Notice Banner */}
       {clearedVehicle && (
         <div className="loader-clearance-notice" role="status">
@@ -193,10 +245,10 @@ export function LoaderDashboardPage() {
         </div>
       )}
 
-      {currentView === 'dashboard' ? (
+      {currentView === 'dashboard' || !vehicle ? (
         /* View 1: Vehicle Queue & Statistics */
         <VehicleQueueList
-          vehicles={VEHICLES}
+        vehicles={vehicles}
           activeVehicleIndex={activeVehicleIndex}
           vehicleFilter={vehicleFilter}
           onFilterChange={setVehicleFilter}
@@ -258,7 +310,15 @@ export function LoaderDashboardPage() {
 
           {/* Bottom Section: Loading Sequence */}
           <ShipmentSequenceSection
-            shipments={SHIPMENTS}
+            shipments={(selectedTrip?.stops ?? []).map((stop) => ({
+          id: stop.orderRef,
+          route: `Peliyagoda → ${stop.outletName}`,
+          type: 'Order',
+          quantity: `${stop.units} units`,
+          weight: `${stop.weightKg} Kg`,
+          dimensions: `${stop.volumeM3} m³`,
+          tag: stop.status,
+            }))}
           />
         </>
       )}

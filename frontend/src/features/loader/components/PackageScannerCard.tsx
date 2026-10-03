@@ -15,6 +15,7 @@ import {
 import QrScanner from 'qr-scanner';
 
 export interface PackageData {
+  stopId?: string;
   id: string;
   type: string;
   weight: string;

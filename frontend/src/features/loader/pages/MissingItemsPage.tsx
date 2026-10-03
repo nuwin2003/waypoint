@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api, LoadingMissingItem } from '../../../api';
 import { PackageMinus, Search, RefreshCw } from 'lucide-react';
 import '../scanPage.css';
 
 interface MissingItem {
   id: string;
+  stopId: string;
   shipmentId: string;
   expectedDock: string;
   truck: string;
@@ -11,14 +13,16 @@ interface MissingItem {
   status: 'pending-investigation' | 'located';
 }
 
-const INITIAL_MISSING: MissingItem[] = [
-  { id: 'PKG-044', shipmentId: 'SHP-9821', expectedDock: 'Dock #3', truck: 'LG-3342', weight: '54 kg', status: 'pending-investigation' },
-  { id: 'PKG-078', shipmentId: 'SHP-9823', expectedDock: 'Dock #1', truck: 'LG-6789', weight: '22 kg', status: 'pending-investigation' },
-];
-
 export function MissingItemsPage() {
-  const [missing, setMissing] = useState<MissingItem[]>(INITIAL_MISSING);
+  const [missing, setMissing] = useState<MissingItem[]>([]);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const loadMissing = () => api.loadingMissing().then((items: LoadingMissingItem[]) => setMissing(items.map((item) => ({
+    id: item.packageCode, stopId: item.stopId, shipmentId: item.orderRef, expectedDock: 'Not assigned',
+    truck: item.vehicleId, weight: item.weight, status: item.status,
+  }))));
+  useEffect(() => { loadMissing().catch((e) => setError(e instanceof Error ? e.message : 'Could not load missing items.')); }, []);
 
   const filtered = missing.filter(
     (m) =>
@@ -28,15 +32,15 @@ export function MissingItemsPage() {
   );
 
   const handleMarkLocated = (id: string) => {
-    setMissing((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: 'located' } : item
-      )
-    );
+    const item = missing.find((candidate) => candidate.id === id);
+    if (!item) return;
+    api.updateLoadingMissing(item.stopId, 'located').then(loadMissing)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not update missing item.'));
   };
 
   return (
     <div className="scan-packages-page-container">
+      {error && <p role="alert">{error}</p>}
       <div className="scan-page-header">
         <div className="scan-page-title-area">
           <h1>Missing Items</h1>
