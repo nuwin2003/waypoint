@@ -45,9 +45,11 @@ public class ApiExceptionHandler {
             status = responseStatusException.getStatusCode();
         }
         log.error("api.error type={} exception={}", status.is5xxServerError() ? "INTERNAL" : "REQUEST",
-                exception.getClass().getSimpleName());
+                exception.getClass().getSimpleName(), exception);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status,
-                status.is5xxServerError() ? "An unexpected error occurred" : "The request could not be processed");
+                exception instanceof ResponseStatusException responseStatusException
+                        ? responseStatusException.getReason()
+                        : status.is5xxServerError() ? "An unexpected error occurred" : "The request could not be processed");
         problem.setType(URI.create("https://waypoint.lk/problems/request-error"));
         problem.setProperty("code", status.is5xxServerError() ? "INTERNAL_ERROR" : "REQUEST_ERROR");
         return problem;

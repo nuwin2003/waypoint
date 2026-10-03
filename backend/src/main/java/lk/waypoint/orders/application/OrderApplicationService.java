@@ -58,7 +58,8 @@ public class OrderApplicationService {
     @Transactional(readOnly = true)
     public List<Order> listForDispatcher(String email, String outletId, LocalDate orderDate) {
         if (!repository.canUserAccessOutlet(email, outletId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this outlet");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Your dispatcher account is not assigned to this outlet's depot");
         }
         return orderDate == null ? repository.findByOutlet(outletId)
                 : repository.findByOutletAndDate(outletId, orderDate);

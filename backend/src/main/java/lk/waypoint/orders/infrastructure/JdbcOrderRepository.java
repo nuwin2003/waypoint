@@ -2,6 +2,7 @@ package lk.waypoint.orders.infrastructure;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class JdbcOrderRepository implements OrderRepository {
                   temp_requirement, order_units, order_weight_kg, order_volume_m3, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, order.id(), order.orderRef(), order.outletId(), order.productBrand(), order.itemDescription(),
-                order.orderDate(), order.placedAt(),
+                order.orderDate(), Timestamp.from(order.placedAt()),
                 order.afterCutoff(), order.tempRequirement().name(), order.units(), order.weightKg(),
                 order.volumeM3(), order.status().name());
     }
@@ -57,8 +58,10 @@ public class JdbcOrderRepository implements OrderRepository {
     @Override
     public boolean canUserAccessOutlet(String email, String outletId) {
         Boolean allowed = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM app_user u "
-                + "JOIN outlet o ON o.depot_id = u.depot_id WHERE u.email = ? AND u.active = true "
-                + "AND u.role = 'DISPATCHER' AND o.id = ? AND o.active = true)", Boolean.class, email, outletId);
+                + "JOIN outlet o ON o.id = ? AND o.active = true "
+                + "WHERE u.email = ? AND u.active = true "
+                + "AND (u.role = 'ADMIN' OR (u.role = 'DISPATCHER' AND u.depot_id = o.depot_id))",
+                Boolean.class, outletId, email);
         return Boolean.TRUE.equals(allowed);
     }
 
