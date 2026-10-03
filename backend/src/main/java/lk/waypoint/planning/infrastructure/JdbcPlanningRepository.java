@@ -2,6 +2,7 @@ package lk.waypoint.planning.infrastructure;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -139,7 +140,7 @@ public class JdbcPlanningRepository implements PlanningRepository {
             jdbc.update("INSERT INTO deferral_record (id, order_id, plan_id, reason_code, unavoidable, priority_score, "
                     + "score_breakdown, notified_at) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?)", UUID.randomUUID(),
                     deferral.orderId(), planId, deferral.reasonCode(), deferral.unavoidable(), deferral.priorityScore(),
-                    scoreBreakdownJson(deferral), Instant.now(clock));
+                    scoreBreakdownJson(deferral), Timestamp.from(Instant.now(clock)));
         }
     }
 
