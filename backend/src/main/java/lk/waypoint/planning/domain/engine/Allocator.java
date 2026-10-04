@@ -20,6 +20,12 @@ public final class Allocator {
 
     public AllocationResult allocate(List<PlanningOrder> orders, List<PlanningVehicle> vehicles,
             Map<String, TravelProfile> travelByDistrict, Map<String, Double> weeklyFuelUsed) {
+        return allocate(orders, vehicles, travelByDistrict, weeklyFuelUsed, Map.of());
+    }
+
+    public AllocationResult allocate(List<PlanningOrder> orders, List<PlanningVehicle> vehicles,
+            Map<String, TravelProfile> travelByDistrict, Map<String, Double> weeklyFuelUsed,
+            Map<UUID, String> preferredVehicleByOrder) {
         List<PlanningVehicle> availableVehicles = vehicles.stream()
                 .filter(vehicle -> vehicle.status() == VehicleStatus.AVAILABLE)
                 .toList();
@@ -31,7 +37,8 @@ public final class Allocator {
                 .toList();
         List<AllocationResult.Deferral> deferrals = new ArrayList<>();
         for (PlanningOrder order : ranked) {
-            Assignment assignment = findAssignment(order, states, travelByDistrict, weeklyFuelUsed);
+            Assignment assignment = findAssignment(order, states, travelByDistrict, weeklyFuelUsed,
+                    preferredVehicleByOrder.get(order.id()));
             if (assignment == null) {
                 PriorityScorer.Score score = scorer.score(order);
                 deferrals.add(new AllocationResult.Deferral(order.id(), "NO_COMPATIBLE_CAPACITY", true,
@@ -45,13 +52,17 @@ public final class Allocator {
     }
 
     private Assignment findAssignment(PlanningOrder order, Map<String, VehicleState> states,
-            Map<String, TravelProfile> travelByDistrict, Map<String, Double> weeklyFuelUsed) {
+            Map<String, TravelProfile> travelByDistrict, Map<String, Double> weeklyFuelUsed,
+            String preferredVehicleId) {
         TravelProfile travel = travelByDistrict.get(order.districtId());
         if (travel == null) {
             return null;
         }
         Assignment best = null;
         for (VehicleState state : states.values()) {
+            if (preferredVehicleId != null && !preferredVehicleId.equals(state.vehicle.id())) {
+                continue;
+            }
             for (TripDraft trip : state.trips) {
                 if (trip.brand() != order.brand() || !trip.districtId().equals(order.districtId())) {
                     continue;

@@ -4,12 +4,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import lk.waypoint.planning.application.PlanRunApplicationService;
 import lk.waypoint.planning.application.PlanRunApplicationService.PlanRunResult;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,7 +31,8 @@ public class PlanController {
     @PostMapping("/run")
     @ResponseStatus(HttpStatus.CREATED)
     public PlanRunResult run(@Valid @RequestBody RunPlanRequest request, Authentication authentication) {
-        return service.run(request.depotId(), request.planDate(), authentication.getName());
+        return service.run(request.depotId(), request.planDate(), request.assignedOrderId(),
+                request.assignedVehicleId(), authentication.getName());
     }
 
     @GetMapping("/context")
@@ -40,6 +43,14 @@ public class PlanController {
         return service.context(depotId, planDate, authentication.getName());
     }
 
+    @PatchMapping("/release")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void release(@RequestParam String depotId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate planDate,
+            Authentication authentication) {
+        service.publish(depotId, planDate, authentication.getName());
+    }
+
     public record RunPlanRequest(@NotBlank String depotId, @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate planDate) { }
+            LocalDate planDate, UUID assignedOrderId, String assignedVehicleId) { }
 }

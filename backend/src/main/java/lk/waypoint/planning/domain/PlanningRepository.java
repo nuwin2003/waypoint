@@ -22,10 +22,11 @@ public interface PlanningRepository {
     void saveTrips(UUID planId, List<TripDraft> trips);
     void saveDeferrals(UUID planId, List<AllocationResult.Deferral> deferrals);
     Optional<ExistingPlan> findExistingPlan(String depotId, LocalDate planDate);
+    void publishPlan(UUID planId);
 
     record PlanningOrderSummary(UUID id, String orderRef, String outletName, String brand,
             String depotId, String temperature, java.math.BigDecimal weightKg,
             java.math.BigDecimal volumeM3, int units, boolean deferredYesterday, String status) { }
-    record ExistingPlan(UUID id, int deferralCount, List<ExistingTrip> trips) { }
+    record ExistingPlan(UUID id, String status, int deferralCount, List<ExistingTrip> trips) { }
     record ExistingTrip(String vehicleId, int tripNo, List<UUID> orderIds) { }
 }

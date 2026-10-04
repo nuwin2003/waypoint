@@ -78,11 +78,13 @@ public class JdbcPlanningRepository implements PlanningRepository {
 
     @Override
     public Optional<PlanningRepository.ExistingPlan> findExistingPlan(String depotId, LocalDate planDate) {
-        List<UUID> planIds = jdbc.query(
-                "SELECT id FROM dispatch_plan WHERE depot_id = ? AND plan_date = ?",
-                (row, number) -> row.getObject("id", UUID.class), depotId, planDate);
-        if (planIds.isEmpty()) return Optional.empty();
-        UUID planId = planIds.getFirst();
+        List<PlanHeader> plans = jdbc.query(
+                "SELECT id, status FROM dispatch_plan WHERE depot_id = ? AND plan_date = ?",
+                (row, number) -> new PlanHeader(row.getObject("id", UUID.class), row.getString("status")),
+                depotId, planDate);
+        if (plans.isEmpty()) return Optional.empty();
+        PlanHeader plan = plans.getFirst();
+        UUID planId = plan.id();
         int deferralCount = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM deferral_record WHERE plan_id = ?", Integer.class, planId);
         List<PlanningRepository.ExistingTrip> trips = jdbc.query("""
@@ -101,9 +103,17 @@ public class JdbcPlanningRepository implements PlanningRepository {
                         rows.getFirst().tripNo(), rows.stream().map(TripOrderRow::orderId)
                                 .filter(java.util.Objects::nonNull).toList()))
                 .toList();
-        return Optional.of(new PlanningRepository.ExistingPlan(planId, deferralCount, trips));
+        return Optional.of(new PlanningRepository.ExistingPlan(planId, plan.status(), deferralCount, trips));
     }
 
+    @Override
+    public void publishPlan(UUID planId) {
+        jdbc.update("UPDATE trip SET status = 'PUBLISHED' WHERE plan_id = ? AND status = 'DRAFT'", planId);
+        jdbc.update("UPDATE dispatch_plan SET status = 'PUBLISHED', published_at = CURRENT_TIMESTAMP "
+                + "WHERE id = ? AND status = 'DRAFT'", planId);
+    }
+
+    private record PlanHeader(UUID id, String status) { }
     private record TripOrderRow(String vehicleId, int tripNo, UUID orderId) { }
 
     @Override

@@ -70,6 +70,10 @@ public class AdminUserApplicationService {
     public UserSummary setAssignment(UUID id, String depotId, String vehicleId) {
         UserSummary user = find(id);
         String storedRole = user.role();
+        if ("DRIVER".equals(storedRole) && vehicleId != null && !vehicleId.isBlank()
+                && (depotId == null || depotId.isBlank())) {
+            depotId = findVehicleDepot(vehicleId);
+        }
         validateAssignment(storedRole, depotId, vehicleId, id);
         int changed = jdbc.update("""
                 UPDATE app_user SET depot_id = ?, vehicle_id = ?
