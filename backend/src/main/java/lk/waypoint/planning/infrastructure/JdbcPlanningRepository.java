@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Optional;
 import lk.waypoint.planning.domain.PlanningRepository;
 import lk.waypoint.planning.domain.engine.AllocationResult;
 import lk.waypoint.planning.domain.engine.Brand;
@@ -42,17 +43,18 @@ public class JdbcPlanningRepository implements PlanningRepository {
     public List<PlanningOrderSummary> findPlanningOrders(String depotId, LocalDate planDate) {
         return jdbc.query("""
                 SELECT o.id, o.order_ref, x.name AS outlet_name, o.product_brand,
-                       x.depot_id, o.temp_requirement, o.order_weight_kg,
+                       x.depot_id, o.temp_requirement, o.order_units, o.order_weight_kg,
                        o.order_volume_m3, o.deferred_yesterday, o.status
                 FROM orders o JOIN outlet x ON x.id = o.outlet_id
                 WHERE x.depot_id = ? AND o.order_date = ?
-                  AND o.status IN ('PLACED', 'NEXT_RUN', 'DEFERRED')
+                  AND o.status IN ('PLACED', 'NEXT_RUN', 'DEFERRED', 'PLANNED')
                 ORDER BY o.deferred_yesterday DESC, o.placed_at
                 """, (row, number) -> new PlanningOrderSummary(
                 row.getObject("id", UUID.class), row.getString("order_ref"),
                 row.getString("outlet_name"), row.getString("product_brand"),
                 row.getString("depot_id"), row.getString("temp_requirement"),
                 row.getBigDecimal("order_weight_kg"), row.getBigDecimal("order_volume_m3"),
+                row.getInt("order_units"),
                 row.getBoolean("deferred_yesterday"), row.getString("status")), depotId, planDate);
     }
 
@@ -73,6 +75,36 @@ public class JdbcPlanningRepository implements PlanningRepository {
                 ORDER BY o.placed_at
                 """, (row, number) -> mapOrder(row), depotId, planDate);
     }
+
+    @Override
+    public Optional<PlanningRepository.ExistingPlan> findExistingPlan(String depotId, LocalDate planDate) {
+        List<UUID> planIds = jdbc.query(
+                "SELECT id FROM dispatch_plan WHERE depot_id = ? AND plan_date = ?",
+                (row, number) -> row.getObject("id", UUID.class), depotId, planDate);
+        if (planIds.isEmpty()) return Optional.empty();
+        UUID planId = planIds.getFirst();
+        int deferralCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM deferral_record WHERE plan_id = ?", Integer.class, planId);
+        List<PlanningRepository.ExistingTrip> trips = jdbc.query("""
+                SELECT t.vehicle_id, t.trip_no, ts.order_id
+                FROM trip t
+                LEFT JOIN trip_stop ts ON ts.trip_id = t.id
+                WHERE t.plan_id = ?
+                ORDER BY t.vehicle_id, t.trip_no, ts.seq
+                """, (row, number) -> new TripOrderRow(row.getString("vehicle_id"),
+                row.getInt("trip_no"), row.getObject("order_id", UUID.class)), planId)
+                .stream()
+                .collect(Collectors.groupingBy(row -> row.vehicleId() + "|" + row.tripNo(),
+                        java.util.LinkedHashMap::new, Collectors.toList()))
+                .values().stream()
+                .map(rows -> new PlanningRepository.ExistingTrip(rows.getFirst().vehicleId(),
+                        rows.getFirst().tripNo(), rows.stream().map(TripOrderRow::orderId)
+                                .filter(java.util.Objects::nonNull).toList()))
+                .toList();
+        return Optional.of(new PlanningRepository.ExistingPlan(planId, deferralCount, trips));
+    }
+
+    private record TripOrderRow(String vehicleId, int tripNo, UUID orderId) { }
 
     @Override
     public List<PlanningVehicle> findVehicles(String depotId) {

@@ -9,6 +9,7 @@ import lk.waypoint.planning.domain.engine.TripDraft;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import lk.waypoint.planning.domain.PlanningRepository;
+import lk.waypoint.planning.domain.PlanningRepository.ExistingPlan;
 import lk.waypoint.planning.domain.engine.AllocationResult;
 import lk.waypoint.planning.domain.engine.Allocator;
 import lk.waypoint.planning.domain.engine.TravelProfile;
@@ -29,6 +30,14 @@ public class PlanRunApplicationService {
     public PlanRunResult run(String depotId, LocalDate planDate, String actorEmail) {
         if (!repository.canUserAccessDepot(actorEmail, depotId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this depot");
+        }
+        ExistingPlan existingPlan = repository.findExistingPlan(depotId, planDate).orElse(null);
+        if (existingPlan != null) {
+            return new PlanRunResult(existingPlan.id(), depotId, planDate, existingPlan.trips().size(),
+                    existingPlan.deferralCount(), List.of(),
+                    existingPlan.trips().stream()
+                            .map(trip -> new TripResult(trip.vehicleId(), trip.tripNo(), trip.orderIds()))
+                            .toList());
         }
         List<lk.waypoint.planning.domain.engine.PlanningOrder> orders =
                 repository.findEligibleOrders(depotId, planDate);

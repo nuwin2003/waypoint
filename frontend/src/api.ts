@@ -96,6 +96,7 @@ export type PlanningContext = {
     temperature: TempRequirement;
     weightKg: number;
     volumeM3: number;
+    units: number;
     deferredYesterday: boolean;
     status: string;
   }>;
@@ -378,6 +379,7 @@ export const api = {
     weightKg: number;
     volumeM3: number;
   }) => request<Order>('/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  receiveOrder: (id: string) => request<Order>(`/orders/${id}/receive`, { method: 'PATCH' }),
   runPlan: (depotId: string, planDate: string) => request<PlanRunResult>('/plans/run', {
     method: 'POST',
     body: JSON.stringify({ depotId, planDate }),

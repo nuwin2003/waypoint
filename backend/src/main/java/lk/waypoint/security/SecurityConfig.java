@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/health", "/actuator/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders").hasRole("STOREKEEPER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/*/receive").hasRole("STOREKEEPER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders").hasAnyRole("STOREKEEPER", "DISPATCHER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/plans/**").hasAnyRole("DISPATCHER", "ADMIN")
                         .requestMatchers("/api/v1/outlets", "/api/v1/vehicles/**")

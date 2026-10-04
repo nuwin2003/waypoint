@@ -19,6 +19,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,6 +60,11 @@ public class OrderController {
                 : dispatcher ? service.listForDispatcher(authentication.getName(), outletId, orderDate)
                 : service.list(outletId, orderDate);
         return orders.stream().map(OrderResponse::from).toList();
+    }
+
+    @PatchMapping("/{id}/receive")
+    public OrderResponse receive(@PathVariable java.util.UUID id, Authentication authentication) {
+        return OrderResponse.from(service.receive(authentication.getName(), id));
     }
 
     public record CreateOrderRequest(

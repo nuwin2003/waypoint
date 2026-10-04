@@ -11,4 +11,5 @@ public interface OrderRepository {
     List<Order> findByOutlet(String outletId);
     Optional<String> findActiveOutletForUser(String email);
     boolean canUserAccessOutlet(String email, String outletId);
+    Optional<Order> receive(UUID orderId, String outletId);
 }

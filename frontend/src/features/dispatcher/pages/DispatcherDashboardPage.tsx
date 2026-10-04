@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { DeliveryVehiclesCard, DeliveryRateCard, OrdersDeliveredGauge, Modal } from '../../../shared/ui/Components';
-import { api, type Vehicle, type PlanRunResult, type Order, type Outlet } from '../../../api';
+import { api, type Vehicle, type PlanRunResult, type Outlet } from '../../../api';
 import arrowIcon from '../../../assets/arrow-icon.png';
 import '../dispatcher.css';
 
 export function DispatcherDashboardPage() {
   const { searchQuery } = (useOutletContext() as { searchQuery?: string }) || {};
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo' }).format(new Date());
 
   const [date, setDate] = useState(today);
   const [isPlanningModalOpen, setIsPlanningModalOpen] = useState(false);
@@ -17,26 +17,49 @@ export function DispatcherDashboardPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [routes, setRoutes] = useState<Array<{ id: string; vehicle: string; driver: string; brandDistrict: string; stops: string; status: string }>>([]);
   const [depotId, setDepotId] = useState('');
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Array<{
+    id: string;
+    orderRef: string;
+    outletName: string;
+    brand: string;
+    units: number;
+    status: string;
+  }>>([]);
 
   useEffect(() => {
     let active = true;
     api.outlets().then(async (outlets: Outlet[]) => {
-      const groups = await Promise.all(outlets.map((outlet) => api.orders(outlet.id)));
-      const allOrders = groups.flat();
       if (!active) return;
       setDepotId(outlets[0]?.depotId ?? '');
-      setOrders(allOrders);
-      setRoutes(allOrders.filter((order) => !['DEFERRED', 'NEXT_RUN'].includes(order.status.toUpperCase())).map((order) => {
-        const outlet = outlets.find((item) => item.id === order.outletId);
-        const raw = order.status.toUpperCase();
-        const status = /DELIVER|RECEIV/.test(raw) ? 'delivered' : /DEFER|NEXT_RUN/.test(raw) ? 'deferred' : /LOAD|PLAN/.test(raw) ? 'loading' : 'active';
-        const brand = order.productBrand === 'FRESH' ? 'Fresh' : order.productBrand === 'STYLE' ? 'Style' : 'Tech';
-        return { id: order.orderRef, vehicle: 'Not assigned', driver: 'Not assigned', brandDistrict: `${brand} · ${outlet?.name ?? outlet?.districtId ?? ''}`, stops: `${order.units} units`, status };
-      }));
     }).catch(() => { if (active) { setOrders([]); setRoutes([]); } });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!depotId || !date) return;
+    api.planningContext(depotId, date).then((context) => {
+      setOrders(context.orders.map((order) => ({
+        id: order.id,
+        orderRef: order.orderRef,
+        outletName: order.outletName,
+        brand: order.brand === 'FRESH' ? 'Fresh' : order.brand === 'STYLE' ? 'Style' : 'Tech',
+        units: order.units,
+        status: order.status,
+      })));
+      setVehicles(context.vehicles);
+      setRoutes(context.orders.map((order) => ({
+        id: order.orderRef,
+        vehicle: 'Not assigned',
+        driver: 'Not assigned',
+        brandDistrict: `${order.brand === 'FRESH' ? 'Fresh' : order.brand === 'STYLE' ? 'Style' : 'Tech'} · ${order.outletName}`,
+        stops: order.status === 'PLANNED' ? 'Planned' : 'Ready',
+        status: order.status === 'PLANNED' ? 'loading' : 'active',
+      })));
+    }).catch(() => {
+      setOrders([]);
+      setRoutes([]);
+    });
+  }, [depotId, date]);
 
   useEffect(() => {
     if (!depotId) return;
@@ -62,6 +85,13 @@ export function DispatcherDashboardPage() {
     try {
       const result = await api.runPlan(depotId, date);
       setPlanResult(result);
+      const assignments = new Map(result.trips?.flatMap((trip) => trip.orderIds.map((orderId) => [orderId, trip.vehicleId] as const)));
+      setRoutes((current) => current.map((route) => {
+        const order = orders.find((item) => item.orderRef === route.id);
+        return order && assignments.has(order.id)
+          ? { ...route, vehicle: assignments.get(order.id) ?? 'Assigned', status: 'loading' }
+          : route;
+      }));
     } catch (error) {
       setPlanError(error instanceof Error ? error.message : 'Planning could not be completed.');
     } finally {

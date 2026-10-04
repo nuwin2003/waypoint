@@ -65,6 +65,16 @@ public class JdbcOrderRepository implements OrderRepository {
         return Boolean.TRUE.equals(allowed);
     }
 
+    @Override
+    public Optional<Order> receive(UUID orderId, String outletId) {
+        int updated = jdbc.update("UPDATE orders SET status = 'RECEIVED', version = version + 1 "
+                + "WHERE id = ? AND outlet_id = ? AND status != 'RECEIVED'", orderId, outletId);
+        if (updated == 0) return Optional.empty();
+        return jdbc.query("SELECT id, order_ref, outlet_id, product_brand, item_description, order_date, placed_at, after_cutoff, "
+                + "temp_requirement, order_units, order_weight_kg, order_volume_m3, status "
+                + "FROM orders WHERE id = ? AND outlet_id = ?", this::map, orderId, outletId).stream().findFirst();
+    }
+
     private Order map(ResultSet result, int row) throws SQLException {
         return new Order(result.getObject("id", UUID.class), result.getString("order_ref"),
                 result.getString("outlet_id"), result.getString("product_brand"), result.getString("item_description"),

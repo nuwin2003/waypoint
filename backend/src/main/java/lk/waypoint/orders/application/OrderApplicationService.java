@@ -55,6 +55,15 @@ public class OrderApplicationService {
                 : repository.findByOutletAndDate(outletId, orderDate);
     }
 
+    @Transactional
+    public Order receive(String email, UUID orderId) {
+        String outletId = repository.findActiveOutletForUser(email).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to an active outlet"));
+        return repository.receive(orderId, outletId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Order was not found or already received"));
+    }
+
     @Transactional(readOnly = true)
     public List<Order> listForDispatcher(String email, String outletId, LocalDate orderDate) {
         if (!repository.canUserAccessOutlet(email, outletId)) {
