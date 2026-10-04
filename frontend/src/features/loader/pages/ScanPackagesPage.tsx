@@ -13,6 +13,7 @@ import { PackageReviewModal } from '../components/PackageReviewModal';
 import '../scanPage.css';
 
 interface TruckData {
+  tripId?: string;
   id: string;
   name: string;
   loadCode: string;
@@ -83,16 +84,18 @@ export function ScanPackagesPage() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [loadCompleteSuccess, setLoadCompleteSuccess] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [loadingTrips, setLoadingTrips] = useState(true);
 
   useEffect(() => {
     api.loadingQueue().then(async (queue) => {
       const details = await Promise.all(queue.map((trip) => api.loadingTrip(trip.tripId)));
       const datasets: Record<string, TruckData> = {};
       details.forEach((trip) => {
-        const key = `Truck – ${trip.vehicleId}`;
+        const key = trip.tripId;
         datasets[key] = {
+          tripId: trip.tripId,
           id: trip.vehicleId,
-          name: key,
+          name: `${trip.vehicleId} · Trip ${trip.tripNo}`,
           loadCode: `Trip ${trip.tripNo}`,
           dock: 'Dock —',
           shipment: `${trip.stops.length} orders`,
@@ -116,10 +119,12 @@ export function ScanPackagesPage() {
         const currentIndex = Math.max(0, packages.findIndex((pkg) => pkg.status !== 'scanned'));
         return [key, { packages, currentIndex, scans: [] }];
       })));
-    }).catch((error) => setApiError(error instanceof Error ? error.message : 'Could not load loading trips.'));
+    }).catch((error) => setApiError(error instanceof Error ? error.message : 'Could not load loading trips.'))
+      .finally(() => setLoadingTrips(false));
   }, []);
 
   const activeTruck = truckDatasets[selectedTruckKey] ?? Object.values(truckDatasets)[0] ?? {
+    tripId: '',
     id: '',
     name: 'No loading trip',
     loadCode: 'No trip',
@@ -155,10 +160,19 @@ export function ScanPackagesPage() {
   }, [packages]);
 
   // Execute scan transition
-  const executeScan = (targetIndex: number) => {
+  const executeScan = async (targetIndex: number) => {
     const updated = [...packages];
     const pkgToScan = updated[targetIndex];
-    if (!pkgToScan) return;
+    if (!pkgToScan || pkgToScan.status === 'scanned') return;
+
+    if (pkgToScan.stopId) {
+      try {
+        await api.updateLoadingStop(pkgToScan.stopId, 'LOADED');
+      } catch (error) {
+        setApiError(error instanceof Error ? error.message : 'Could not save package status.');
+        return;
+      }
+    }
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     updated[targetIndex] = {
@@ -166,13 +180,6 @@ export function ScanPackagesPage() {
       status: 'scanned',
       timestamp: timeStr,
     };
-    const stopId = pkgToScan.stopId;
-    if (stopId) {
-      api.updateLoadingStop(stopId, 'LOADED').catch((error) => {
-        setApiError(error instanceof Error ? error.message : 'Could not save package status.');
-      });
-    }
-
     // Prepend new scan to the top of recent scans list
     const newScanItem: RecentScanItem = {
       id: Date.now().toString() + '-' + pkgToScan.id,
@@ -204,14 +211,21 @@ export function ScanPackagesPage() {
     }));
   };
 
-  const handleConfirmCurrentScan = () => {
-    executeScan(currentIndex);
+  const handleConfirmCurrentScan = (scannedPackage?: PackageData) => {
+    const targetIndex = scannedPackage?.id
+      ? packages.findIndex((pkg) => pkg.id === scannedPackage.id)
+      : currentIndex;
+    if (targetIndex < 0) {
+      setApiError('This QR code does not belong to an order on the selected trip.');
+      return;
+    }
+    void executeScan(targetIndex);
   };
 
   const handleManualCodeSubmit = (code: string) => {
     const targetIdx = packages.findIndex((p) => p.id === code);
     if (targetIdx !== -1) {
-      executeScan(targetIdx);
+      void executeScan(targetIdx);
       return true;
     }
     return false;
@@ -220,12 +234,15 @@ export function ScanPackagesPage() {
   const handleReportDefect = (defect: { packageId: string; issueType: string; severity: string; notes: string }) => {
     const packageToFlag = packages.find((pkg) => pkg.id === defect.packageId);
     if (packageToFlag?.stopId) {
-      api.createLoadingDefect({
-        stopId: packageToFlag.stopId,
-        issueType: defect.issueType,
-        severity: defect.severity === 'critical' ? 'critical' : defect.severity,
-        notes: defect.notes,
-      }).catch((error) => {
+      const saveReport = defect.issueType === 'Missing item'
+        ? api.updateLoadingStop(packageToFlag.stopId, 'MISSING')
+        : api.createLoadingDefect({
+          stopId: packageToFlag.stopId,
+          issueType: defect.issueType,
+          severity: defect.severity,
+          notes: defect.notes,
+        });
+      saveReport.catch((error) => {
         setApiError(error instanceof Error ? error.message : 'Could not save the package defect.');
       });
     }
@@ -245,9 +262,19 @@ export function ScanPackagesPage() {
     }
   };
 
-  const handleCompleteLoad = () => {
-    setLoadCompleteSuccess(true);
+  const handleCompleteLoad = async () => {
+    if (!activeTruck.tripId || !isAllCompleted || totalCount === 0) return;
+    setApiError(null);
+    try {
+      await api.updateLoadingTrip(activeTruck.tripId, 'LOADED');
+      setLoadCompleteSuccess(true);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not finish this load.');
+    }
   };
+
+  if (loadingTrips) return <p className="loader-empty-state">Loading released trips…</p>;
+  if (!activeTruck.tripId) return <p className="loader-empty-state" role={apiError ? 'alert' : 'status'}>{apiError ?? 'No released trips are waiting to be loaded.'}</p>;
 
   return (
     <div className="scan-packages-page-container">
@@ -279,7 +306,7 @@ export function ScanPackagesPage() {
             onClick={() => setTruckDropdownOpen(!truckDropdownOpen)}
           >
             <Truck className="w-5 h-5 text-purple-600 inline" />
-            <span>{selectedTruckKey}</span>
+            <span>{activeTruck.name}</span>
             <ChevronDown className="w-4 h-4 text-gray-500" />
           </button>
           {truckDropdownOpen && (
@@ -294,7 +321,7 @@ export function ScanPackagesPage() {
                     setTruckDropdownOpen(false);
                   }}
                 >
-                  {key}
+                  {truckDatasets[key].name}
                 </button>
               ))}
             </div>
@@ -325,7 +352,7 @@ export function ScanPackagesPage() {
             onOpenManualCode={() => setManualCodeOpen(true)}
             onOpenFlagDefect={() => setFlagDefectOpen(true)}
             onReviewPackage={() => setReviewOpen(true)}
-            onScanSuccess={() => handleConfirmCurrentScan()}
+            onScanSuccess={handleConfirmCurrentScan}
             isAllCompleted={isAllCompleted}
           />
         </div>
@@ -395,7 +422,7 @@ export function ScanPackagesPage() {
           <div className="modal-container success-complete-modal" onClick={(e) => e.stopPropagation()}>
             <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-3" />
             <h2>Loading Complete!</h2>
-            <p>All {totalCount} packages have been successfully loaded for <strong>{selectedTruckKey}</strong> ({loadedWeight} total cargo).</p>
+            <p>All {totalCount} orders have been loaded for <strong>{activeTruck.name}</strong> ({loadedWeight} total cargo).</p>
             <p className="text-sm text-gray-500 mt-2">Vehicle is cleared for driver manifest signature and departure.</p>
             <button
               type="button"

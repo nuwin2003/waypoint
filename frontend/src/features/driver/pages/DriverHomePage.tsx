@@ -37,7 +37,8 @@ export function DriverHomePage() {
       <section className="dv-route-card">
         <div className="dv-route-card-head">
           <span className="dv-route-eyebrow"><Layers size={16} aria-hidden /> TODAY'S ROUTE</span>
-          <Link to="/drive/route/map" className="dv-outline-pill">Ready to go</Link>
+          <span>{['CLEARED', 'IN_PROGRESS'].includes(route.status) ? 'Ready to go' : route.status === 'LOADED' ? 'Awaiting departure clearance' : 'Loading in progress'}</span>
+          <Link to="/drive/route/map" className="dv-outline-pill">View route</Link>
         </div>
 
         <div className="dv-route-id">
@@ -62,6 +63,7 @@ export function DriverHomePage() {
         <div className="dv-route-foot">
           <Clock size={14} aria-hidden /> First delivery {route.firstWindow ?? 'not scheduled'}
         </div>
+        {!['CLEARED', 'IN_PROGRESS'].includes(route.status) && <button className="dv-secondary-button" type="button" onClick={() => void refreshRoute()}>Refresh route readiness</button>}
       </section>
 
       <div className="dv-quick-actions">

@@ -6,6 +6,7 @@ import '../scanPage.css';
 interface MissingItem {
   id: string;
   stopId: string;
+  packageCode: string;
   shipmentId: string;
   expectedDock: string;
   truck: string;
@@ -19,7 +20,7 @@ export function MissingItemsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadMissing = () => api.loadingMissing().then((items: LoadingMissingItem[]) => setMissing(items.map((item) => ({
-    id: item.packageCode, stopId: item.stopId, shipmentId: item.orderRef, expectedDock: 'Not assigned',
+    id: item.id, stopId: item.stopId, packageCode: item.packageCode, shipmentId: item.orderRef, expectedDock: 'Not assigned',
     truck: item.vehicleId, weight: item.weight, status: item.status,
   }))));
   useEffect(() => { loadMissing().catch((e) => setError(e instanceof Error ? e.message : 'Could not load missing items.')); }, []);
@@ -34,7 +35,7 @@ export function MissingItemsPage() {
   const handleMarkLocated = (id: string) => {
     const item = missing.find((candidate) => candidate.id === id);
     if (!item) return;
-    api.updateLoadingMissing(item.stopId, 'located').then(loadMissing)
+    api.updateLoadingMissing(item.id, 'located').then(loadMissing)
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not update missing item.'));
   };
 
@@ -77,7 +78,7 @@ export function MissingItemsPage() {
             <tbody>
               {filtered.map((item) => (
                 <tr key={item.id}>
-                  <td><strong>{item.id}</strong></td>
+                  <td><strong>{item.packageCode}</strong></td>
                   <td>{item.shipmentId}</td>
                   <td>{item.expectedDock}</td>
                   <td>{item.truck}</td>

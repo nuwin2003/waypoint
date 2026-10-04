@@ -1,5 +1,6 @@
 export interface DefectPackageItem {
   id: string;
+  stopId: string;
   packageCode: string;
   typeAndCargo: string;
   issueNote: string;

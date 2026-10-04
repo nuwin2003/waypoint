@@ -31,6 +31,7 @@
 .dispatch-stat-card > small { color: #8791a4; font-size: 11px; }
 .dispatch-success-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border: 1px solid #b8e4d5; border-radius: 10px; background: #eaf8f2; color: #227c62; }
 .dispatch-success-notice button { border: 0; background: none; color: inherit; font-size: 20px; cursor: pointer; }
+.dispatch-error-notice { padding: 12px 15px; border: 1px solid #f2c6c6; border-radius: 10px; background: #fff0f0; color: #a33737; }
 .dispatch-empty { padding: 22px; color: #7e879d; text-align: center; }
 .dispatch-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); clip-path: inset(50%); white-space: nowrap; }
 .dispatch-table-scroll { width: 100%; overflow-x: auto; }
@@ -296,7 +297,8 @@
 .dispatch-incident-actions .dispatch-primary-button, .dispatch-incident-actions .dispatch-outline-button, .dispatch-incident-actions .dispatch-danger-button { min-height: 38px; padding: 0 11px; font-size: 11px; }
 .dispatch-history-controls { display: grid; grid-template-columns: minmax(240px, 1fr) 200px 160px 160px; gap: 12px; }
 .dispatch-date-range { position: relative; display: flex; align-items: center; }
-.dispatch-date-range input { width: 100%; min-height: 44px; padding: 0 40px 0 14px; border: 1px solid #e4e8ef; border-radius: 11px; background: #fff; color: #35403c; font: 13px var(--font-sans); }
+.dispatch-date-range input, .dispatch-date-range select { width: 100%; min-height: 44px; padding: 0 40px 0 14px; border: 1px solid #e4e8ef; border-radius: 11px; background: #fff; color: #35403c; font: 13px var(--font-sans); }
+.dispatch-date-range select { appearance: none; }
 .dispatch-date-range span { position: absolute; right: 14px; color: #8a94a7; }
 .dispatch-history-table { width: 100%; border-collapse: collapse; text-align: left; }
 .dispatch-history-table th { padding: 15px 16px; background: #fafbfc; color: #818ba0; font-size: 11px; font-weight: 600; text-transform: uppercase; }

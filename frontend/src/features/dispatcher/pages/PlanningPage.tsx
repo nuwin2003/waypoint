@@ -11,7 +11,7 @@ function vehicleLabel(vehicle: Vehicle) {
 }
 
 export function PlanningPage() {
-  const [context, setContext] = useState<PlanningContext>({ orders: [], vehicles: [] });
+  const [context, setContext] = useState<PlanningContext>({ orders: [], vehicles: [], planId: null, planStatus: null });
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [notice, setNotice] = useState('');
@@ -36,8 +36,9 @@ export function PlanningPage() {
     setRunning(true);
     setError('');
     try {
-      const result = await api.runPlan(depotId, planDate);
-      setNotice(`Allocation saved: ${result.tripCount} routes, ${result.deferralCount} deferred. Loading sequences are ready.`);
+      const result = await api.runPlan(depotId, planDate,
+        selectedOrder && selectedVehicle ? { orderId: selectedOrder.id, vehicleId: selectedVehicle.id } : undefined);
+      setNotice(`Draft saved: ${result.tripCount} routes, ${result.deferralCount} deferred. Release the plan when it is ready for loading.`);
       const refreshed = await api.planningContext(depotId, planDate);
       setContext(refreshed);
       setSelectedOrderId(refreshed.orders[0]?.id ?? '');
@@ -48,8 +49,23 @@ export function PlanningPage() {
     }
   };
 
+  const releasePlan = async () => {
+    setRunning(true);
+    setError('');
+    try {
+      await api.releasePlan(depotId, planDate);
+      const refreshed = await api.planningContext(depotId, planDate);
+      setContext(refreshed);
+      setNotice('Plan released to the loader and driver screens.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not release the plan.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
   return <div className="dispatch-page">
-    <DispatcherPageHeader title="Planning & Allocation" subtitle="Constraints are validated before an assignment is confirmed" action={<Link className="dispatch-outline-button" to="/dispatch/planning/proposal">View suggested dispatch plan <DispatchIcon name="chevron" /></Link>} />
+    <DispatcherPageHeader title="Planning & Allocation" subtitle="Constraints are validated before an assignment is confirmed" action={<><Link className="dispatch-outline-button" to="/dispatch/planning/proposal">View suggested dispatch plan <DispatchIcon name="chevron" /></Link>{context.planId && context.planStatus === 'DRAFT' && <button className="dispatch-primary-button" type="button" disabled={running} onClick={() => void releasePlan()}>{running ? 'Releasingâ€¦' : 'Approve & release to loading'}</button>}{context.planStatus === 'PUBLISHED' && <span>Released to loading</span>}</>} />
     {notice && <div className="dispatch-success-notice" role="status">{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss">×</button></div>}
     {error && <div className="dispatch-error-notice" role="alert">{error}<button type="button" onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
     <div className="dispatch-planning-layout"><section className="dispatch-unallocated-panel"><h2>Unallocated orders ({context.orders.length})</h2>{context.orders.map((order) => <button key={order.id} className={`dispatch-unallocated-order${selectedOrder?.id === order.id ? ' selected' : ''}`} type="button" onClick={() => setSelectedOrderId(order.id)}><div><strong>{order.orderRef}</strong><DispatcherBadge tone={order.status === 'DEFERRED' ? 'late' : order.temperature === 'CHILLED' ? 'chilled' : 'ambient'}>{order.status === 'DEFERRED' ? 'deferred' : order.temperature.toLowerCase()}</DispatcherBadge></div><span>{order.outletName}</span><small>{order.weightKg} kg · {order.volumeM3} m³ · {order.depotId}</small>{(order.deferredYesterday || order.status === 'DEFERRED') && <em>{order.status === 'DEFERRED' ? 'Deferred and available for re-planning' : 'Skipped last run'}</em>}</button>)}{context.orders.length === 0 && <p className="dispatch-empty">No unallocated orders for this depot and date.</p>}</section>

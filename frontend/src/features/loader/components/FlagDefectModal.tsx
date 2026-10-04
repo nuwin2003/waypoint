@@ -106,6 +106,7 @@ export function FlagDefectModal({
                 <option value="Leaking Fluid / Wet Cargo">Leaking Fluid / Wet Cargo</option>
                 <option value="Wrong Destination / Misrouted">Wrong Destination / Misrouted</option>
                 <option value="Unreadable Barcode / Missing Tag">Unreadable Barcode / Missing Tag</option>
+                <option value="Missing item">Missing item</option>
                 <option value="Temperature Abuse / Thawed">Temperature Abuse / Thawed</option>
               </select>
             </div>

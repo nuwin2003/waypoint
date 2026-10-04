@@ -40,14 +40,14 @@ export function VehicleQueueList({
       <header className="loader-dashboard-heading">
         <div>
           <h1>Vehicles</h1>
-          <p>Peliyagoda distribution centre · Morning loading window</p>
+          <p>Released trips waiting to be loaded or cleared for departure</p>
         </div>
       </header>
 
       {/* Top 4 Quick Stats */}
       <div className="loader-dashboard-stats">
         {[
-          { label: 'Trucks today', value: vehicleCounts.total, note: 'Peliyagoda', status: 'all' as const },
+          { label: 'Trips today', value: vehicleCounts.total, note: 'Released dispatch plans', status: 'all' as const },
           { label: 'Loading', value: vehicleCounts.loading, note: 'In progress', status: 'loading' as const },
           { label: 'Ready', value: vehicleCounts.ready, note: 'Departure cleared', status: 'ready' as const },
           { label: 'Flagged', value: vehicleCounts.flagged, note: 'Needs attention', status: 'flagged' as const },
@@ -88,18 +88,18 @@ export function VehicleQueueList({
       {/* Queue Header */}
       <div className="loader-queue-heading">
         <h2>Vehicle queue</h2>
-        <span>{filtered.length} vehicles</span>
+        <span>{filtered.length} trips</span>
       </div>
 
       {/* Queue Rows */}
       <div className="loader-vehicle-queue">
         {filtered.map((entry) => {
-          const index = vehicles.findIndex((item) => item.id === entry.id);
+          const index = vehicles.findIndex((item) => entry.tripId ? item.tripId === entry.tripId : item.id === entry.id);
 
           return (
             <button
               className={`loader-queue-row${index === activeVehicleIndex ? ' selected' : ''}`}
-              key={entry.id}
+              key={entry.tripId ?? entry.id}
               type="button"
               onClick={() => onSelectVehicle(index)}
               aria-label={`Open truck ${entry.plate}, ${STATUS_LABELS[entry.status]}`}
@@ -111,8 +111,8 @@ export function VehicleQueueList({
                   </svg>
                 </i>
                 <span>
-                  <strong>{entry.plate}</strong>
-                  <small>Dock {entry.dock}</small>
+                <strong>{entry.plate}</strong>
+                <small>Trip {entry.tripNo ?? '—'} · Dock {entry.dock}</small>
                 </span>
               </span>
               <span className="loader-queue-route">
@@ -126,7 +126,7 @@ export function VehicleQueueList({
                 </strong>
               </span>
               <span className={`loader-queue-status ${entry.status}`}>
-                {STATUS_LABELS[entry.status]}
+                {entry.departureCleared ? 'Cleared' : STATUS_LABELS[entry.status]}
               </span>
               <ChevronRight className="loader-chevron" />
             </button>
@@ -134,7 +134,7 @@ export function VehicleQueueList({
         })}
 
         {filtered.length === 0 && (
-          <p className="loader-empty-state">No vehicles match this filter.</p>
+          <p className="loader-empty-state">No released trips are available for this filter. Draft plans appear after the dispatcher releases them.</p>
         )}
       </div>
     </section>

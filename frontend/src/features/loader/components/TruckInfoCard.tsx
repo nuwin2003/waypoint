@@ -4,6 +4,8 @@ export type LoadStatus = 'loading' | 'ready' | 'flagged' | 'not-started';
 
 export interface VehicleEntry {
   tripId?: string;
+  tripNo?: number;
+  departureCleared?: boolean;
   id: string;
   plate: string;
   type: string;
@@ -41,7 +43,7 @@ export function TruckInfoCard({ vehicle, onClearDeparture }: TruckInfoCardProps)
         <strong>{vehicle.plate}</strong>
         <span className={`loader-status-pill ${vehicle.status}`}>
           <i />
-          {STATUS_LABELS[vehicle.status]}
+          {vehicle.departureCleared ? 'Cleared' : STATUS_LABELS[vehicle.status]}
         </span>
       </div>
 
@@ -67,7 +69,7 @@ export function TruckInfoCard({ vehicle, onClearDeparture }: TruckInfoCardProps)
             <MessageSquare className="w-4 h-4" />
           </button>
         </div>
-        {vehicle.status === 'ready' && onClearDeparture && (
+        {vehicle.status === 'ready' && !vehicle.departureCleared && onClearDeparture && (
           <button
             className="loader-clear-button"
             type="button"
@@ -91,8 +93,8 @@ export function TruckInfoCard({ vehicle, onClearDeparture }: TruckInfoCardProps)
           <strong>{`Dock #${Number(vehicle.dock.slice(2)) || vehicle.dock}`}</strong>
         </div>
         <div>
-          <span>Started</span>
-          <strong>08:34 AM</strong>
+          <span>Trip</span>
+          <strong>{vehicle.tripNo ?? '—'}</strong>
         </div>
       </div>
 

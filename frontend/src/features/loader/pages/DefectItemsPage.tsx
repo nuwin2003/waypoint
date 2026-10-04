@@ -14,7 +14,7 @@ export function DefectItemsPage() {
 
   const loadDefects = () => api.loadingDefects().then((items) => {
     const mapped = items.map((item) => ({
-      id: item.id, packageCode: item.packageCode, typeAndCargo: item.typeAndCargo,
+      id: item.id, stopId: item.stopId, packageCode: item.packageCode, typeAndCargo: item.typeAndCargo,
       quantityNote: `${item.units} units`, issueNote: item.issueNote || 'No notes provided.',
       severity: item.severity === 'critical' ? 'high' : item.severity,
       timestamp: new Date(item.timestamp).toLocaleTimeString(),
@@ -38,25 +38,40 @@ export function DefectItemsPage() {
     setSelectedItem(item);
   };
 
-  const handleConfirmDefect = (item: DefectPackageItem) => {
-    api.updateLoadingDefect(item.id, 'confirmed').then(loadDefects).catch((e) => setError(e instanceof Error ? e.message : 'Could not confirm defect.'));
+  const handleConfirmDefect = async (item: DefectPackageItem) => {
+    try {
+      await api.updateLoadingDefect(item.id, 'confirmed');
+      await loadDefects();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not confirm defect.');
+    }
     if (selectedItem && selectedItem.id === item.id) {
       setSelectedItem({ ...selectedItem, status: 'confirmed' });
     }
   };
 
-  const handleMarkResolved = (item: DefectPackageItem) => {
-    api.updateLoadingDefect(item.id, 'resolved').then(loadDefects).catch((e) => setError(e instanceof Error ? e.message : 'Could not resolve defect.'));
-    // Switch selection to next unresolved if present
+  const handleMarkResolved = async (item: DefectPackageItem) => {
+    try {
+      await api.updateLoadingDefect(item.id, 'resolved');
+      await api.updateLoadingStop(item.stopId, 'LOADING');
+      await loadDefects();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not resolve defect.');
+    }
   };
 
   const handleOpenRescan = (item: DefectPackageItem) => {
     setRescanTarget(item);
   };
 
-  const handleConfirmRescan = (item: DefectPackageItem) => {
-    // Re-scan resolves the defect
-    handleMarkResolved(item);
+  const handleConfirmRescan = async (item: DefectPackageItem) => {
+    try {
+      await api.updateLoadingStop(item.stopId, 'LOADED');
+      await api.updateLoadingDefect(item.id, 'resolved');
+      await loadDefects();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save the rescan.');
+    }
   };
 
   return (

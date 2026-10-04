@@ -12,6 +12,7 @@ export function DispatcherDashboardPage() {
   const [date, setDate] = useState(today);
   const [isPlanningModalOpen, setIsPlanningModalOpen] = useState(false);
   const [planResult, setPlanResult] = useState<PlanRunResult | null>(null);
+  const [planReleased, setPlanReleased] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [isAllocating, setIsAllocating] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -85,6 +86,7 @@ export function DispatcherDashboardPage() {
     try {
       const result = await api.runPlan(depotId, date);
       setPlanResult(result);
+      setPlanReleased(false);
       const assignments = new Map(result.trips?.flatMap((trip) => trip.orderIds.map((orderId) => [orderId, trip.vehicleId] as const)));
       setRoutes((current) => current.map((route) => {
         const order = orders.find((item) => item.orderRef === route.id);
@@ -94,6 +96,19 @@ export function DispatcherDashboardPage() {
       }));
     } catch (error) {
       setPlanError(error instanceof Error ? error.message : 'Planning could not be completed.');
+    } finally {
+      setIsAllocating(false);
+    }
+  };
+
+  const handleReleasePlan = async () => {
+    setIsAllocating(true);
+    setPlanError(null);
+    try {
+      await api.releasePlan(depotId, date);
+      setPlanReleased(true);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : 'The plan could not be released.');
     } finally {
       setIsAllocating(false);
     }
@@ -241,7 +256,8 @@ export function DispatcherDashboardPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--purple-900)' }}>Plan Summary: {planResult.planId}</div>
               <div style={{ fontSize: 12, color: 'var(--purple-700)', marginTop: 4 }}>
                 * Total Trips Generated: <strong>{planResult.tripCount}</strong><br />
-                * Capacity Deferrals: <strong>{planResult.deferralCount} orders</strong>
+                * Capacity Deferrals: <strong>{planResult.deferralCount} orders</strong><br />
+                * Status: <strong>{planReleased ? 'Released to loaders and drivers' : 'Draft; awaiting dispatcher release'}</strong>
               </div>
             </div>
           )}
@@ -250,6 +266,7 @@ export function DispatcherDashboardPage() {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
             <button className="btn-secondary" onClick={() => setIsPlanningModalOpen(false)} type="button">Close</button>
+            {planResult && !planReleased && <button className="btn-secondary" onClick={() => void handleReleasePlan()} disabled={isAllocating || planResult.tripCount === 0} type="button">{isAllocating ? 'Releasing...' : 'Approve & release'}</button>}
             <button className="btn-primary" onClick={handleRunPlanning} disabled={isAllocating} type="button">
               {isAllocating ? 'Allocating...' : 'Execute Allocator ->'}
             </button>

@@ -101,6 +101,8 @@ export type PlanningContext = {
     status: string;
   }>;
   vehicles: Vehicle[];
+  planId: string | null;
+  planStatus: 'DRAFT' | 'PUBLISHED' | null;
 };
 
 export type LoadingTrip = {
@@ -112,6 +114,7 @@ export type LoadingTrip = {
   status: string;
   totalStops: number;
   completedStops: number;
+  flaggedStops: number;
   totalWeightKg: number;
   totalVolumeM3: number;
   districtId: string;
@@ -265,6 +268,31 @@ export type DriverHistory = {
   proofOfDelivery: DriverProofOfDelivery[];
 };
 
+export type DispatcherHistoryEvent = {
+  time: string;
+  type: 'Delivery' | 'Incident' | 'Intervention' | 'Trip';
+  event: string;
+  detail: string;
+  vehicle: string;
+  route: string;
+  outcome: string;
+  owner: string;
+};
+
+export type DispatcherHistory = {
+  periodDays: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  stats: {
+    eventsToday: number;
+    tripsCompleted: number;
+    interventions: number;
+    incidentsResolved: number;
+  };
+  events: DispatcherHistoryEvent[];
+};
+
 const apiBase = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -380,10 +408,11 @@ export const api = {
     volumeM3: number;
   }) => request<Order>('/orders', { method: 'POST', body: JSON.stringify(payload) }),
   receiveOrder: (id: string) => request<Order>(`/orders/${id}/receive`, { method: 'PATCH' }),
-  runPlan: (depotId: string, planDate: string) => request<PlanRunResult>('/plans/run', {
+  runPlan: (depotId: string, planDate: string, assignment?: { orderId: string; vehicleId: string }) => request<PlanRunResult>('/plans/run', {
     method: 'POST',
-    body: JSON.stringify({ depotId, planDate }),
+    body: JSON.stringify({ depotId, planDate, ...(assignment ? { assignedOrderId: assignment.orderId, assignedVehicleId: assignment.vehicleId } : {}) }),
   }),
+  releasePlan: (depotId: string, planDate: string) => request<void>(`/plans/release${queryString({ depotId, planDate })}`, { method: 'PATCH' }),
   planningContext: (depotId: string, planDate: string) => request<PlanningContext>(`/plans/context${queryString({ depotId, planDate })}`),
   loadingQueue: (planDate?: string) => request<LoadingTrip[]>(`/loading/queue${queryString({ planDate })}`),
   loadingTrip: (tripId: string) => request<LoadingTripDetails>(`/loading/trips/${tripId}`),
@@ -460,4 +489,6 @@ export const api = {
     body: JSON.stringify(payload),
   }),
   driverHistory: (periodDays = 30) => request<DriverHistory>(`/driver/history${queryString({ periodDays: String(periodDays) })}`),
+  dispatcherHistory: (params: { periodDays: number; page: number; pageSize?: number; type?: string; status?: string; search?: string }) =>
+    request<DispatcherHistory>(`/dispatcher/history${queryString({ ...params, pageSize: String(params.pageSize ?? 7), periodDays: String(params.periodDays), page: String(params.page) })}`),
 };

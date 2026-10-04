@@ -52,6 +52,8 @@ export function NavigationPage() {
   const [drivingRoute, setDrivingRoute] = useState<DrivingRouteResult | null>(null);
   const [routeWarning, setRouteWarning] = useState<string | null>(null);
   const [routeLoading, setRouteLoading] = useState(true);
+  const [startError, setStartError] = useState<string | null>(null);
+  const arrivalLoggedFor = useRef<string | null>(null);
 
   const stop = todayRoute?.stops.find((item) => !['DELIVERED', 'PARTIAL_DELIVERY', 'UNABLE_TO_DELIVER', 'SKIPPED'].includes(item.status))
     ?? todayRoute?.stops[0];
@@ -110,6 +112,14 @@ export function NavigationPage() {
   const arrived = toStop <= ARRIVED_M;
   const eta = formatClock(addMinutes(now, driveMinutes));
 
+  useEffect(() => {
+    if (!navigating || !arrived || !stop || arrivalLoggedFor.current === stop.stopId) return;
+    arrivalLoggedFor.current = stop.stopId;
+    void api.driverUpdateStop(stop.stopId, { status: 'ARRIVED' }).catch((error) => {
+      setStartError(error instanceof Error ? error.message : 'Could not record arrival at this stop.');
+    });
+  }, [navigating, arrived, stop?.stopId]);
+
   const gpsLabel = status === 'active' && fix
     ? `GPS ±${Math.round(fix.accuracy)} m`
     : status === 'denied'
@@ -120,10 +130,17 @@ export function NavigationPage() {
           ? 'Waiting for GPS…'
           : 'Locating…';
 
-  const start = () => {
-    setNavigating(true);
-    setFollowing(true);
-    if (todayRoute?.routeId) void api.driverStartRoute(todayRoute.routeId);
+  const start = async () => {
+    if (!todayRoute?.routeId || !['CLEARED', 'IN_PROGRESS'].includes(todayRoute.status)) return;
+    setStartError(null);
+    try {
+      await api.driverStartRoute(todayRoute.routeId);
+      setNavigating(true);
+      setFollowing(true);
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : 'Could not start this route.');
+      return;
+    }
     if (!muted && stop) speak(`Starting navigation to ${stop.outletName}`);
   };
 
@@ -215,6 +232,8 @@ export function NavigationPage() {
       </div>
 
       <div className="dv-nav-card">
+        {startError && <p className="dv-photo-error" role="alert">{startError}</p>}
+        {!['CLEARED', 'IN_PROGRESS'].includes(todayRoute.status) && <button className="dv-secondary-button" type="button" onClick={() => void refreshRoute()}>Refresh route readiness</button>}
         {!navigating && (
           <div className="dv-nav-card-label">
             <span className="dv-step-pill">STOP {stop.sequence} · {stop.category.toUpperCase()}</span>
@@ -255,8 +274,8 @@ export function NavigationPage() {
             <X size={18} aria-hidden /> End navigation
           </button>
         ) : (
-          <button className="dv-nav-cta" type="button" onClick={start}>
-            <NavIcon size={18} aria-hidden /> Start navigation
+          <button className="dv-nav-cta" type="button" disabled={!['CLEARED', 'IN_PROGRESS'].includes(todayRoute.status)} onClick={() => void start()}>
+            <NavIcon size={18} aria-hidden /> {['CLEARED', 'IN_PROGRESS'].includes(todayRoute.status) ? 'Start navigation' : 'Waiting for loader clearance'}
           </button>
         )}
       </div>

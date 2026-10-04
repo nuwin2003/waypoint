@@ -20,7 +20,7 @@ export function OrderHistoryPage() {
   const records = useMemo(() => historyRecords.filter((record) => {
     const matchesSearch = !query || [record.id, record.brand, record.date, record.invoice, record.receipt].some((text) => text.toLowerCase().includes(query));
     return matchesSearch && (brand === 'All brands' || record.brand === brand) && (status === 'All statuses' || record.status === status);
-  }), [query, brand, status]);
+  }), [historyRecords, query, brand, status]);
 
   return (
     <div className="store-page store-history-page">

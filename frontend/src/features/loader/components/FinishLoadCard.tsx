@@ -11,7 +11,7 @@ export function FinishLoadCard({
   totalCount,
   onCompleteLoad,
 }: FinishLoadCardProps) {
-  const isReadyToComplete = remainingCount === 0;
+  const isReadyToComplete = totalCount > 0 && remainingCount === 0;
 
   return (
     <div className={`loader-side-card finish-load-card ${isReadyToComplete ? 'ready-state' : ''}`}>
@@ -25,7 +25,7 @@ export function FinishLoadCard({
       <p className="finish-load-subtitle">
         {isReadyToComplete
           ? `All ${totalCount} packages scanned successfully. Ready for departure authorization.`
-          : `Available when all ${totalCount} packages are scanned.`}
+          : totalCount === 0 ? 'This trip has no orders to load.' : `Available when all ${totalCount} orders are scanned.`}
       </p>
 
       <button

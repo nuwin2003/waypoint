@@ -167,53 +167,33 @@ export function LoaderDashboardPage() {
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      api.loadingQueue().catch(() => []),
-      api.vehicles().catch(() => []),
-    ])
-      .then(([trips, depotVehicles]) => {
-        const tripMap = new Map(trips.map((t) => [t.vehicleId, t]));
-        const vehicleList = depotVehicles.length > 0
-          ? depotVehicles
-          : trips.map((t) => ({ id: t.vehicleId, type: t.temperature === 'CHILLED' ? 'FREEZER' : 'DRY', temperature: t.temperature, status: 'AVAILABLE', weightCapKg: 8000, volumeCapM3: 32 }));
-
-        const mapped: VehicleEntry[] = vehicleList.map((v) => {
-          const trip = tripMap.get(v.id);
-          const totalStops = trip ? trip.totalStops : 0;
-          const completedStops = trip ? trip.completedStops : 0;
-          const loadPct = totalStops === 0 ? 0 : Math.round((completedStops / totalStops) * 100);
-
-          let status: LoadStatus = 'not-started';
-          if (trip) {
-            if (trip.status === 'LOADED' || (completedStops === totalStops && totalStops > 0)) {
-              status = 'ready';
-            } else if (completedStops > 0 || trip.status === 'LOADING') {
-              status = 'loading';
-            }
-          }
-
-          const numPart = parseInt(v.id.replace(/\D/g, '') || '1', 10);
-          const dockNum = `D-0${(numPart % 6) + 1}`;
-
+    api.loadingQueue()
+      .then((trips) => {
+        const mapped: VehicleEntry[] = trips.map((trip) => {
+          const loadPct = trip.totalStops === 0 ? 0 : Math.round((trip.completedStops / trip.totalStops) * 100);
+          const status: LoadStatus = trip.flaggedStops > 0 ? 'flagged'
+            : ['LOADED', 'CLEARED'].includes(trip.status) ? 'ready'
+              : trip.status === 'LOADING' || trip.completedStops > 0 ? 'loading' : 'not-started';
           return {
-            tripId: trip?.tripId,
-            id: v.id,
-            plate: v.id,
-            type: v.temperature === 'REEFER' || v.temperature === 'CHILLED' ? 'Freezer Truck' : 'Dry-Box Truck',
-            dock: dockNum,
-            route: trip ? `Peliyagoda to ${trip.districtId}` : 'Peliyagoda (Standby)',
+            tripId: trip.tripId,
+            tripNo: trip.tripNo,
+            departureCleared: trip.status === 'CLEARED',
+            id: trip.vehicleId,
+            plate: trip.vehicleId,
+            type: trip.temperature === 'CHILLED' ? 'Freezer Truck' : 'Dry-Box Truck',
+            dock: 'D-01',
+            route: `Peliyagoda to ${trip.districtId}`,
             originSub: 'Peliyagoda',
-            destSub: trip ? trip.districtId : 'Standby',
+            destSub: trip.districtId,
             driver: 'Assigned Driver',
             loadPct,
             status,
-            packages: totalStops,
-            tempReq: v.temperature === 'REEFER' || v.temperature === 'CHILLED' ? 'Chilled' : 'Dry',
-            stopsDone: completedStops,
-            totalStops,
+            packages: trip.totalStops,
+            tempReq: trip.temperature === 'CHILLED' ? 'Chilled' : 'Dry',
+            stopsDone: trip.completedStops,
+            totalStops: trip.totalStops,
           };
         });
-
         setLiveVehicles(mapped);
       })
       .catch((error) => {
@@ -245,14 +225,18 @@ export function LoaderDashboardPage() {
     setSelectedVehicleForClearance(entry);
   };
 
-  const handleConfirmClearance = (entry: VehicleEntry) => {
-    if (entry.tripId) {
-      api.updateLoadingTrip(entry.tripId, 'LOADED').catch((error) => {
-        setLoadingError(error instanceof Error ? error.message : 'Could not clear the vehicle for departure.');
-      });
+  const handleConfirmClearance = async (entry: VehicleEntry) => {
+    if (!entry.tripId) return;
+    setLoadingError(null);
+    try {
+      await api.updateLoadingTrip(entry.tripId, 'CLEARED');
+      setLiveVehicles((current) => current.map((vehicle) => vehicle.tripId === entry.tripId
+        ? { ...vehicle, departureCleared: true } : vehicle));
+      setClearedVehicle(`${entry.plate} · Trip ${entry.tripNo ?? ''}`);
+      setSelectedVehicleForClearance(null);
+    } catch (error) {
+      setLoadingError(error instanceof Error ? error.message : 'Could not clear the vehicle for departure.');
     }
-    setClearedVehicle(entry.plate);
-    setSelectedVehicleForClearance(null);
   };
 
   return (
