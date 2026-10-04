@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791116517574,
+      "tag": "0000_waypoint_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791118523225,
+      "tag": "0001_seed_official_datasets",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791120340402,
+      "tag": "0002_atomic_dispatch_draft_edits",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791120695569,
+      "tag": "0003_fix_dispatch_edit_order_ids",
+      "breakpoints": true
+    }
+  ]
+}

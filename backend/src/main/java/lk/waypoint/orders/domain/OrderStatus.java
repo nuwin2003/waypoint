@@ -1,6 +1,0 @@
-package lk.waypoint.orders.domain;
-
-public enum OrderStatus {
-    PLACED, NEXT_RUN, CONFIRMED, QUEUED, PLANNED, LOADING, SHORT_LOADED, LOADED,
-    IN_TRANSIT, DELIVERED, RECEIVED, DEFERRED, FAILED, DISPUTED
-}
