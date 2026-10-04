@@ -66,7 +66,7 @@ public class JdbcPlanningRepository implements PlanningRepository {
     @Override
     public List<PlanningOrder> findEligibleOrders(String depotId, LocalDate planDate) {
         return jdbc.query("""
-                SELECT o.id, o.outlet_id, o.temp_requirement, o.order_weight_kg, o.order_volume_m3,
+                SELECT o.id, x.depot_id, o.temp_requirement, o.order_weight_kg, o.order_volume_m3,
                   o.deferred_yesterday, o.days_since_last_served, x.brand, x.district_id,
                   x.parking_constraint, x.dock_type
                 FROM orders o JOIN outlet x ON x.id = o.outlet_id
@@ -180,7 +180,7 @@ public class JdbcPlanningRepository implements PlanningRepository {
     private PlanningOrder mapOrder(ResultSet row) throws SQLException {
         Brand brand = Brand.valueOf(row.getString("brand"));
         TempClass temperature = TempClass.valueOf(row.getString("temp_requirement"));
-        return new PlanningOrder(row.getObject("id", UUID.class), row.getString("outlet_id"),
+        return new PlanningOrder(row.getObject("id", UUID.class), row.getString("depot_id"),
                 row.getString("district_id"), brand, temperature,
                 ParkingConstraint.valueOf(row.getString("parking_constraint")),
                 DockType.valueOf(row.getString("dock_type")), row.getBigDecimal("order_weight_kg"),

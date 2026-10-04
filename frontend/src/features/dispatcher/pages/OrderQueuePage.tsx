@@ -4,6 +4,8 @@ import { api, type Order, type Outlet } from '../../../api';
 import { DispatcherBadge, DispatcherPageHeader } from '../components/DispatcherUI';
 import type { DispatchOrder } from '../data/dispatcherData';
 
+const PAGE_SIZE = 10;
+
 export function OrderQueuePage() {
   const { searchQuery = '' } = useOutletContext<{ searchQuery?: string }>();
   const [brand, setBrand] = useState('All brand');
@@ -13,6 +15,7 @@ export function OrderQueuePage() {
   const [selectedOrder, setSelectedOrder] = useState<DispatchOrder | null>(null);
   const [page, setPage] = useState(1);
   const [dispatchOrders, setDispatchOrders] = useState<DispatchOrder[]>([]);
+
   useEffect(() => {
     api.outlets().then(async (outlets: Outlet[]) => {
       const groups = await Promise.all(outlets.map(async (outlet) => ({ outlet, orders: await api.orders(outlet.id) })));
@@ -36,10 +39,22 @@ export function OrderQueuePage() {
       setDispatchOrders(allRows);
     }).catch(() => setDispatchOrders([]));
   }, []);
+
+  // dispatchOrders must be a dependency, otherwise the memo keeps the initial empty result
   const filtered = useMemo(() => dispatchOrders.filter((order) => {
     const matchesSearch = !searchQuery || [order.id, order.outlet, order.brand, order.depot, order.status].some((value) => value.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch && (brand === 'All brand' || order.brand === brand) && (depot === 'All depot' || order.depot === depot) && (status === 'All status' || order.status === status) && (cutoff === 'All cutoff' || order.cutoff === cutoff);
-  }), [searchQuery, brand, depot, status, cutoff]);
+  }), [dispatchOrders, searchQuery, brand, depot, status, cutoff]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  // Go back to page 1 whenever the filters or search change
+  useEffect(() => { setPage(1); }, [searchQuery, brand, depot, status, cutoff]);
+
+  // Keep the page in range if the data shrinks
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="dispatch-page">
@@ -55,7 +70,7 @@ export function OrderQueuePage() {
         { label: 'Status', value: status, set: setStatus, options: ['All status', 'in transit', 'assigned', 'pending', 'deferred', 'delivered'] },
         { label: 'Cutoff', value: cutoff, set: setCutoff, options: ['All cutoff', 'before 4 PM', 'after 4 PM'] },
       ].map((filter) => <label key={filter.label}>{filter.label}<select value={filter.value} onChange={(event) => filter.set(event.target.value)}>{filter.options.map((option) => <option key={option}>{option}</option>)}</select></label>)}</section>
-      <div className="dispatch-table-wrap"><table className="dispatch-table"><thead><tr><th>Order</th><th>Outlet</th><th>Brand</th><th>Temp</th><th>Load</th><th>Cutoff</th><th>Status</th><th></th></tr></thead><tbody>{filtered.slice((page - 1) * 10, page * 10).map((order) => <tr key={order.id}><td><strong>{order.id}</strong>{order.id === 'O-1001' && <span className="dispatch-link-mark">↗</span>}</td><td>{order.outlet}</td><td>{order.brand}</td><td><DispatcherBadge tone={order.temperature}>{order.temperature}</DispatcherBadge></td><td>{order.weight} kg · {order.volume} m³</td><td><DispatcherBadge tone={order.cutoff === 'after 4 PM' ? 'late' : 'neutral'}>{order.cutoff}</DispatcherBadge></td><td><DispatcherBadge tone={order.status}>{order.status}</DispatcherBadge></td><td><button className="dispatch-outline-button compact" type="button" onClick={() => setSelectedOrder(order)}>Detail</button></td></tr>)}</tbody></table>{filtered.length === 0 && <p className="dispatch-empty">No orders match these filters.</p>}<footer className="dispatch-table-footer">Showing {Math.min((page - 1) * 10 + 1, filtered.length)}-{Math.min(page * 10, filtered.length)} of {filtered.length} orders<div><button disabled={page === 1} onClick={() => setPage(1)} type="button">‹</button><button className="current" type="button">{page}</button><button disabled={filtered.length <= 10} onClick={() => setPage(2)} type="button">2</button><button disabled={filtered.length <= 10} onClick={() => setPage(2)} type="button">›</button></div></footer></div>
+      <div className="dispatch-table-wrap"><table className="dispatch-table"><thead><tr><th>Order</th><th>Outlet</th><th>Brand</th><th>Temp</th><th>Load</th><th>Cutoff</th><th>Status</th><th></th></tr></thead><tbody>{pageRows.map((order) => <tr key={order.id}><td><strong>{order.id}</strong>{order.id === 'O-1001' && <span className="dispatch-link-mark">↗</span>}</td><td>{order.outlet}</td><td>{order.brand}</td><td><DispatcherBadge tone={order.temperature}>{order.temperature}</DispatcherBadge></td><td>{order.weight} kg · {order.volume} m³</td><td><DispatcherBadge tone={order.cutoff === 'after 4 PM' ? 'late' : 'neutral'}>{order.cutoff}</DispatcherBadge></td><td><DispatcherBadge tone={order.status}>{order.status}</DispatcherBadge></td><td><button className="dispatch-outline-button compact" type="button" onClick={() => setSelectedOrder(order)}>Detail</button></td></tr>)}</tbody></table>{filtered.length === 0 && <p className="dispatch-empty">No orders match these filters.</p>}<footer className="dispatch-table-footer">Showing {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}-{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} orders<div><button disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))} type="button" aria-label="Previous page">‹</button><button className="current" type="button">{page}</button><button disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} type="button" aria-label="Next page">›</button></div></footer></div>
       {selectedOrder && <div className="dispatch-drawer-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedOrder(null); }}><aside className="dispatch-order-drawer" role="dialog" aria-modal="true" aria-labelledby="dispatch-order-title"><button className="dispatch-drawer-close" onClick={() => setSelectedOrder(null)} aria-label="Close order details" type="button">×</button><span className="dispatch-drawer-kicker">Order</span><h2 id="dispatch-order-title">{selectedOrder.id}</h2><dl>{[['Outlet', selectedOrder.outlet], ['Brand / depot', `${selectedOrder.brand} · ${selectedOrder.depot}`], ['Temperature', selectedOrder.temperature], ['Units', `${selectedOrder.units}`], ['Weight / volume', `${selectedOrder.weight} kg · ${selectedOrder.volume} m³`], ['Delivery window', 'Not provided by API'], ['Placed', selectedOrder.date], ['Dispatch date', 'Not provided by API'], ['Vehicle', 'Not assigned']].map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><h3>Linked order</h3><article className="dispatch-linked-order"><p>Linked-order details are not provided by the current API.</p><button className="dispatch-primary-button drawer-action" type="button" onClick={() => setSelectedOrder(null)}>Close details</button></article></aside></div>}
     </div>
   );

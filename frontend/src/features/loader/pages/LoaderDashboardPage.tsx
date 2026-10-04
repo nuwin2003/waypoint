@@ -157,7 +157,7 @@ const SHIPMENTS: ShipmentItem[] = [
 ];
 
 export function LoaderDashboardPage() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'truck'>('truck');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'truck'>('dashboard');
   const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
   const [vehicleFilter, setVehicleFilter] = useState<'all' | LoadStatus>('all');
   const [selectedVehicleForClearance, setSelectedVehicleForClearance] = useState<VehicleEntry | null>(null);
@@ -167,27 +167,54 @@ export function LoaderDashboardPage() {
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.loadingQueue()
-      .then((trips) => {
-        setLiveVehicles(trips.map((trip) => ({
-          tripId: trip.tripId,
-          id: trip.vehicleId,
-          plate: trip.vehicleId,
-          type: trip.temperature === 'CHILLED' ? 'Freezer Truck' : 'Dry-Box Truck',
-          dock: '—',
-          route: `Peliyagoda to ${trip.districtId}`,
-          originSub: 'Peliyagoda',
-          destSub: trip.districtId,
-          driver: 'Unassigned',
-          loadPct: trip.totalStops === 0 ? 0 : Math.round((trip.completedStops / trip.totalStops) * 100),
-          status: trip.completedStops === trip.totalStops && trip.totalStops > 0
-            ? 'ready'
-            : trip.completedStops > 0 ? 'loading' : 'not-started',
-          packages: trip.totalStops,
-          tempReq: trip.temperature === 'CHILLED' ? 'Chilled' : 'Dry',
-          stopsDone: trip.completedStops,
-          totalStops: trip.totalStops,
-        })));
+    Promise.all([
+      api.loadingQueue().catch(() => []),
+      api.vehicles().catch(() => []),
+    ])
+      .then(([trips, depotVehicles]) => {
+        const tripMap = new Map(trips.map((t) => [t.vehicleId, t]));
+        const vehicleList = depotVehicles.length > 0
+          ? depotVehicles
+          : trips.map((t) => ({ id: t.vehicleId, type: t.temperature === 'CHILLED' ? 'FREEZER' : 'DRY', temperature: t.temperature, status: 'AVAILABLE', weightCapKg: 8000, volumeCapM3: 32 }));
+
+        const mapped: VehicleEntry[] = vehicleList.map((v) => {
+          const trip = tripMap.get(v.id);
+          const totalStops = trip ? trip.totalStops : 0;
+          const completedStops = trip ? trip.completedStops : 0;
+          const loadPct = totalStops === 0 ? 0 : Math.round((completedStops / totalStops) * 100);
+
+          let status: LoadStatus = 'not-started';
+          if (trip) {
+            if (trip.status === 'LOADED' || (completedStops === totalStops && totalStops > 0)) {
+              status = 'ready';
+            } else if (completedStops > 0 || trip.status === 'LOADING') {
+              status = 'loading';
+            }
+          }
+
+          const numPart = parseInt(v.id.replace(/\D/g, '') || '1', 10);
+          const dockNum = `D-0${(numPart % 6) + 1}`;
+
+          return {
+            tripId: trip?.tripId,
+            id: v.id,
+            plate: v.id,
+            type: v.temperature === 'REEFER' || v.temperature === 'CHILLED' ? 'Freezer Truck' : 'Dry-Box Truck',
+            dock: dockNum,
+            route: trip ? `Peliyagoda to ${trip.districtId}` : 'Peliyagoda (Standby)',
+            originSub: 'Peliyagoda',
+            destSub: trip ? trip.districtId : 'Standby',
+            driver: 'Assigned Driver',
+            loadPct,
+            status,
+            packages: totalStops,
+            tempReq: v.temperature === 'REEFER' || v.temperature === 'CHILLED' ? 'Chilled' : 'Dry',
+            stopsDone: completedStops,
+            totalStops,
+          };
+        });
+
+        setLiveVehicles(mapped);
       })
       .catch((error) => {
         setLiveVehicles([]);
