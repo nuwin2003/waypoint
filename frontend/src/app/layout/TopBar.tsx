@@ -25,6 +25,9 @@ interface TopBarProps {
   onToggleDarkMode: () => void;
   user: { displayName?: string; email?: string; role?: UserRole } | null;
   onSignOut: () => void;
+  online: boolean;
+  pending: number;
+  onSync: () => Promise<void>;
 }
 
 export function TopBar({
@@ -38,10 +41,14 @@ export function TopBar({
   onToggleDarkMode,
   user,
   onSignOut,
+  online,
+  pending,
+  onSync,
 }: TopBarProps) {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: '1',
@@ -63,6 +70,14 @@ export function TopBar({
   const notificationMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -166,6 +181,18 @@ export function TopBar({
 
       {/* Header Actions */}
       <div className="header-actions">
+        {(!online || pending > 0) && (
+          <button
+            className={`connectivity-button${online ? ' online' : ''}`}
+            type="button"
+            onClick={() => void handleSync()}
+            disabled={!online || syncing || pending === 0}
+            title={online ? `Sync ${pending} pending item${pending === 1 ? '' : 's'}` : 'You are offline'}
+          >
+            <span className="connectivity-dot" aria-hidden="true" />
+            {online ? (syncing ? 'Syncing…' : `Sync ${pending}`) : 'You are offline'}
+          </button>
+        )}
         {/* Dark / Light Mode Toggle */}
         <button
           className="icon-btn"

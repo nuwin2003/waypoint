@@ -374,6 +374,38 @@ html, body {
   gap: 12px;
 }
 
+.connectivity-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #f0b4b4;
+  border-radius: 999px;
+  background: #fff5f5;
+  color: #b42318;
+  font: 600 12px var(--font-sans);
+  cursor: pointer;
+}
+
+.connectivity-button.online {
+  border-color: #b7dec7;
+  background: #f0faf4;
+  color: #217346;
+}
+
+.connectivity-button:disabled {
+  cursor: default;
+  opacity: .85;
+}
+
+.connectivity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .icon-btn {
   width: 38px;
   height: 38px;
@@ -1742,6 +1774,4 @@ html, body {
 [data-theme="dark"] .wp-profile-divider {
   border-top-color: var(--border-light);
 }
-
-
 

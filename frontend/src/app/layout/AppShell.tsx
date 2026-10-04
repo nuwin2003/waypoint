@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Sidebar, navItems } from './Sidebar';
 import { TopBar } from './TopBar';
+import { useConnectivity } from '../../shared/hooks/useConnectivity';
+import { api } from '../../api';
+import { syncPendingOrders } from '../../shared/offlineSync';
 
 export function AppShell() {
   const { user, logout } = useAuth();
@@ -11,8 +14,17 @@ export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
+  const { online, pending } = useConnectivity();
   const role = user?.role ?? 'DISPATCHER';
   const links = navItems[role] ?? [];
+
+  const syncOrders = async () => {
+    await syncPendingOrders(api.createOrder);
+  };
+
+  useEffect(() => {
+    if (online && pending > 0) void syncOrders();
+  }, [online, pending]);
 
   const handleSignOut = () => {
     logout();
@@ -39,6 +51,9 @@ export function AppShell() {
         onToggleDarkMode={toggleDark}
         user={user}
         onSignOut={handleSignOut}
+        online={online}
+        pending={pending}
+        onSync={syncOrders}
       />
 
       {/* Main Container */}

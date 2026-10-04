@@ -1,7 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { StoreCutoffBanner, StoreIcon, StoreIconButton, StorePageHeader, StoreStatusBadge } from '../components/StoreUI';
 import { initialSchedules, type OrderSchedule, type ProductBrand } from '../data/storeData';
-import { api } from '../../../api';
+import { ApiError, api, type ProductBrandCode, type TempRequirement } from '../../../api';
+import { enqueueOfflineOrder } from '../../../shared/offlineSync';
 
 const brands: ProductBrand[] = ['Fresh dry', 'Fresh chilled', 'Style', 'Tech'];
 const defaultItems: Record<ProductBrand, string> = {
@@ -50,19 +51,35 @@ export function PlaceOrderPage() {
   const saveOrder = async () => {
     setSubmitting(true);
     setOrderError(null);
+    const payload: {
+      productBrand: ProductBrandCode;
+      itemDescription: string;
+      deliveryDate: string;
+      tempRequirement: TempRequirement;
+      units: number;
+      weightKg: number;
+      volumeM3: number;
+    } = {
+      productBrand: (brand.startsWith('Fresh') ? 'FRESH' : brand.toUpperCase()) as ProductBrandCode,
+      itemDescription: item.trim(),
+      deliveryDate,
+      tempRequirement: brand === 'Fresh chilled' ? 'CHILLED' : 'AMBIENT',
+      units: Number(quantity),
+      weightKg: Number(weightKg),
+      volumeM3: Number(volumeM3),
+    };
     try {
-      await api.createOrder({
-        productBrand: brand.startsWith('Fresh') ? 'FRESH' : brand.toUpperCase() as 'STYLE' | 'TECH',
-        itemDescription: item.trim(),
-        deliveryDate,
-        tempRequirement: brand === 'Fresh chilled' ? 'CHILLED' : 'AMBIENT',
-        units: Number(quantity),
-        weightKg: Number(weightKg),
-        volumeM3: Number(volumeM3),
-      });
+      await api.createOrder(payload);
       setReviewOpen(false);
       setSubmitted(true);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 0) {
+        enqueueOfflineOrder(payload);
+        setReviewOpen(false);
+        setSubmitted(true);
+        setOrderError('You are offline. The order was saved and will sync when the connection is restored.');
+        return;
+      }
       setOrderError(error instanceof Error ? error.message : 'Your order could not be submitted.');
     } finally {
       setSubmitting(false);
