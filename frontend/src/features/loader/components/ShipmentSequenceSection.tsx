@@ -14,23 +14,31 @@ export interface ShipmentItem {
   weight: string;
   dimensions: string;
   tag: string;
+  loadedCount?: number;
+  totalCount?: number;
+  isConfirmed?: boolean;
 }
 
 interface ShipmentSequenceSectionProps {
   shipments: ShipmentItem[];
   onScan?: (shipmentId: string) => void;
   onMarkMissing?: (shipmentId: string) => void;
+  onLoadOneItem?: (shipmentId: string) => void;
+  onConfirmShipment?: (shipmentId: string) => void;
 }
 
 export function ShipmentSequenceSection({
   shipments,
   onScan,
   onMarkMissing,
+  onLoadOneItem,
+  onConfirmShipment,
 }: ShipmentSequenceSectionProps) {
   const [search, setSearch] = useState('');
   const [sortAscending, setSortAscending] = useState(true);
   const [isGridView, setIsGridView] = useState(true);
   const [shipmentStatuses, setShipmentStatuses] = useState<Record<string, ShipmentStatus | undefined>>({});
+  const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
 
   // Active shipment being processed in the modal flow
   const [activeShipment, setActiveShipment] = useState<ShipmentItem | null>(null);
@@ -68,13 +76,16 @@ export function ShipmentSequenceSection({
     setIsOrderSummaryOpen(true);
   };
 
-  // Step 3A: User clicks "Confirm" in OrderSummaryPopup -> Marks package as scanned
+  // Step 3A: User clicks "Confirm" in OrderSummaryPopup -> Marks package as confirmed & scanned
+  // After confirm, both scan and missing buttons disappear and load button appears!
   const handleConfirmOrder = () => {
     if (activeShipment) {
+      setConfirmedIds((prev) => new Set(prev).add(activeShipment.id));
       setShipmentStatuses((prev) => ({
         ...prev,
         [activeShipment.id]: 'scanned',
       }));
+      onConfirmShipment?.(activeShipment.id);
     }
     setIsOrderSummaryOpen(false);
   };
@@ -107,13 +118,13 @@ export function ShipmentSequenceSection({
   };
 
   const orderSummaryData: OrderSummaryData = {
-    orderId: '153468790876',
-    shippingAddress: "45 onye's house",
-    trackingId: '153468790876',
-    quantity: activeShipment?.quantity.replace(/\D/g, '') || '10',
-    itemCount: activeShipment?.quantity.replace(/\D/g, '') || '10',
+    orderId: activeShipment?.id || 'SHP-9821',
+    shippingAddress: activeShipment?.route || 'Peliyagoda → Gampaha',
+    trackingId: activeShipment?.id || 'SHP-9821',
+    quantity: activeShipment?.quantity.replace(/\D/g, '') || '3',
+    itemCount: activeShipment?.quantity.replace(/\D/g, '') || '3',
     estDeliveryDate: '11/03/26; 04:54 pm',
-    tag: 'Refregirated',
+    tag: activeShipment?.tag || 'Standard',
   };
 
   return (
@@ -164,6 +175,10 @@ export function ShipmentSequenceSection({
       <div className={`loader-shipment-grid ${isGridView ? '' : 'list-view'}`}>
         {visibleShipments.map((shipment) => {
           const status = shipmentStatuses[shipment.id];
+          const isConfirmed = shipment.isConfirmed || confirmedIds.has(shipment.id);
+          const loadedCount = shipment.loadedCount ?? 0;
+          const totalCount = shipment.totalCount ?? 3;
+          const isDone = totalCount > 0 && loadedCount >= totalCount;
 
           return (
             <article
@@ -208,26 +223,51 @@ export function ShipmentSequenceSection({
 
               {status && (
                 <div className="loader-shipment-feedback">
-                  {status === 'scanned' && '✓ Marked scanned'}
+                  {status === 'scanned' && (isDone ? '✓ All packages loaded into truck' : '✓ Scanned & Confirmed — Ready to load')}
                   {status === 'missing' && '⚠ Flagged as missing'}
                 </div>
               )}
 
-              <div className="loader-shipment-actions">
-                <button
-                  type="button"
-                  className="loader-scan-button"
-                  onClick={() => handleOpenScan(shipment)}
-                >
-                  Scan
-                </button>
-                <button
-                  type="button"
-                  className="loader-missing-button"
-                  onClick={() => handleToggleMissing(shipment.id)}
-                >
-                  Missing
-                </button>
+              {/* Action Buttons:
+                  Before confirm: Scan and Missing buttons are visible.
+                  After confirm: Both disappear, and Load button appears!
+                  Clicking Load fills one truck package at a time. */}
+              <div className={`loader-shipment-actions ${isConfirmed ? 'single-action' : ''}`}>
+                {!isConfirmed ? (
+                  <>
+                    <button
+                      type="button"
+                      className="loader-scan-button"
+                      onClick={() => handleOpenScan(shipment)}
+                    >
+                      Scan
+                    </button>
+                    <button
+                      type="button"
+                      className="loader-missing-button"
+                      onClick={() => handleToggleMissing(shipment.id)}
+                    >
+                      Missing
+                    </button>
+                  </>
+                ) : isDone ? (
+                  <button
+                    type="button"
+                    className="loader-load-button loaded"
+                    disabled
+                  >
+                    Loaded Successfully
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="loader-load-button"
+                    onClick={() => onLoadOneItem?.(shipment.id)}
+                    title={`Click to load next package into truck (${loadedCount + 1}/${totalCount})`}
+                  >
+                    Load Package ({loadedCount}/{totalCount})
+                  </button>
+                )}
               </div>
             </article>
           );

@@ -193,8 +193,8 @@
 .loader-capacity-numbers strong { font-size: 18px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
 .loader-capacity-numbers small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
 
-.loader-truck-visual { display: grid; place-items: center; min-width: 0; width: 100%; height: 100%; }
-.loader-truck-visual img { display: block; width: 100%; max-height: 380px; object-fit: contain; }
+.loader-truck-visual { display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; }
+
 
 .loader-sequence { display: flex; flex-direction: column; gap: 18px; margin-top: 6px; }
 .loader-sequence-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -391,6 +391,10 @@
   margin-top: auto;
 }
 
+.loader-shipment-actions.single-action {
+  grid-template-columns: 1fr;
+}
+
 .loader-shipment-actions button {
   height: 42px;
   padding: 0 16px;
@@ -433,6 +437,37 @@
 
 .loader-missing-button:hover {
   background: #DDD6FE;
+}
+
+.loader-load-button {
+  background: var(--purple-600);
+  color: #FFFFFF;
+  width: 100%;
+}
+
+.loader-load-button:hover {
+  background: var(--purple-700);
+}
+
+.loader-load-button.loaded {
+  background: var(--status-good-bg);
+  color: var(--status-good-text);
+  border: 1px solid rgba(22, 101, 52, 0.2);
+  cursor: default;
+}
+
+.loader-missing-button {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+[data-theme="dark"] .loader-missing-button {
+  background: #451A1A;
+  color: #FCA5A5;
+}
+
+.loader-missing-button:hover {
+  background: #FECACA;
 }
 
 .loader-empty-state {
